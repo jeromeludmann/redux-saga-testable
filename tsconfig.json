@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "lib": ["es5", "es2015.core", "es2015.iterable"],
+    "outDir": "lib",
+    "declaration": true,
+    "declarationDir": "lib",
+    "strict": true,
+    "noUnusedLocals": true,
+    "noImplicitReturns": true
+  },
+  "include": ["src"]
+}

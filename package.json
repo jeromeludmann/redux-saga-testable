@@ -1,0 +1,41 @@
+{
+  "name": "redux-saga-testable",
+  "version": "0.0.1",
+  "description": "Practical unit test library for redux-saga",
+  "main": "lib/runner.js",
+  "types": "lib/runner.d.ts",
+  "files": [
+    "/lib"
+  ],
+  "scripts": {
+    "build": "rm -rf lib && tsc"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jeromeludmann/redux-saga-testable.git"
+  },
+  "keywords": [
+    "redux-saga",
+    "test",
+    "testing",
+    "redux",
+    "saga"
+  ],
+  "author": {
+    "name": "Jerome Ludmann",
+    "email": "jerome.ludmann@gmail.com"
+  },
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/jeromeludmann/redux-saga-testable/issues"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@types/node": "^11.12.1",
+    "redux-saga": "^1.0.2",
+    "typescript": "^3.4.1"
+  },
+  "peerDependencies": {
+    "redux-saga": "1.0.x"
+  }
+}
