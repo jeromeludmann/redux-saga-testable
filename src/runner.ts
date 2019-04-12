@@ -9,18 +9,45 @@ export interface SagaRunner {
    */
   mock(effect: Effect, result: any, ...nextResults: any[]): SagaRunner
 
+  should: {
+    /**
+     * Asserts that the saga yields an effect.
+     */
+    yield(effect: Effect): SagaRunner
+
+    /**
+     * Asserts that the saga returns a value.
+     */
+    return(value: any): SagaRunner
+
+    /**
+     * Asserts that the saga throws an error.
+     */
+    throw(error: ErrorPattern): SagaRunner
+  }
+
   /**
    * Catches an error thrown by the saga.
    */
-  catch(
-    error: string | RegExp | Error | { new (...args: any[]): any },
-  ): SagaRunner
+  catch(error: ErrorPattern): SagaRunner
 
   /**
    * Runs the saga.
    */
   run(): SagaOutput
 }
+
+export interface SagaOutput {
+  effects: Effect[]
+  return?: any
+  error?: Error
+}
+
+export type ErrorPattern =
+  | string
+  | RegExp
+  | Error
+  | { new (...args: any[]): any }
 
 /**
  * Creates a saga runner.
@@ -35,13 +62,19 @@ export function use<Saga extends (...args: any[]) => any>(
 
   const mocks: Mock[] = []
   const errorToCatch: ErrorToCatch = {}
-  const getRunner = () => runner
+  const assertions: Assertion[] = []
+  const runner: any = {} // will be a SagaRunner
 
-  const runner: SagaRunner = {
-    mock: _mock.bind(null, mocks, getRunner),
-    catch: _catch.bind(null, errorToCatch, getRunner),
-    run: _run.bind(null, mocks, errorToCatch, saga, args),
+  runner.mock = _mock.bind(runner, mocks)
+
+  runner.should = {
+    yield: _yield.bind(runner, assertions),
+    return: _return.bind(runner, assertions),
+    throw: _throw.bind(runner, assertions, errorToCatch),
   }
+
+  runner.catch = _catch.bind(runner, errorToCatch)
+  runner.run = _run.bind(null, { mocks, errorToCatch, assertions }, saga, args)
 
   return runner
 }
@@ -79,8 +112,8 @@ interface Mock {
 }
 
 function _mock(
+  this: SagaRunner,
   mocks: Mock[],
-  getRunner: () => SagaRunner,
   effect: Effect,
   ...results: any[]
 ) {
@@ -107,18 +140,69 @@ function _mock(
   }
 
   mocks.push({ effect, results })
-  return getRunner()
+  return this
+}
+
+type Assertion = (output: SagaOutput) => void
+
+function _yield(this: SagaRunner, assertions: Assertion[], effect: Effect) {
+  assertions.push(output => {
+    if (!output.effects.some(e => isDeepStrictEqual(e, effect))) {
+      throw failure(
+        'Assertion failure\n\n' +
+          `Expected effect:\n\n${stringify(effect)}\n\n` +
+          `Received effects:\n\n${stringify(output.effects)}`,
+        _run,
+      )
+    }
+  })
+
+  return this
+}
+
+function _return(this: SagaRunner, assertions: Assertion[], value: any) {
+  assertions.push(output => {
+    if (!isDeepStrictEqual(output.return, value)) {
+      throw failure(
+        'Assertion failure\n\n' +
+          `Expected return value:\n\n${stringify(value)}\n\n` +
+          `Received return value:\n\n${stringify(output.return)}`,
+        _run,
+      )
+    }
+  })
+
+  return this
+}
+
+function _throw(
+  this: SagaRunner,
+  assertions: Assertion[],
+  errorToCatch: ErrorToCatch,
+  pattern: ErrorPattern,
+) {
+  assertions.push(output => {
+    if (!output.error || !matchError(output.error, pattern)) {
+      throw failure(
+        'Assertion failure\n\n' +
+          `Expected error pattern:\n\n${stringify(pattern)}\n\n` +
+          `Received thrown error:\n\n${stringify(output.error)}`,
+        _run,
+      )
+    }
+  })
+
+  errorToCatch.pattern = pattern
+  return this
 }
 
 interface ErrorToCatch {
   pattern?: ErrorPattern
 }
 
-type ErrorPattern = Parameters<SagaRunner['catch']>[0]
-
 function _catch(
+  this: SagaRunner,
   errorToCatch: ErrorToCatch,
-  getRunner: () => SagaRunner,
   pattern: ErrorPattern,
 ) {
   if (!pattern) {
@@ -134,18 +218,11 @@ function _catch(
   }
 
   errorToCatch.pattern = pattern
-  return getRunner()
-}
-
-export interface SagaOutput {
-  effects: Effect[]
-  return?: any
-  error?: Error
+  return this
 }
 
 function _run(
-  mocks: Mock[],
-  errorToCatch: ErrorToCatch,
+  state: { mocks: Mock[]; errorToCatch: ErrorToCatch; assertions: Assertion[] },
   saga: Saga,
   args: any[],
 ) {
@@ -153,7 +230,7 @@ function _run(
   const iterator = saga(...args)
   let result, nextValue
 
-  mocks = mocks.map(mock => ({
+  const mocks = state.mocks.map(mock => ({
     ...mock,
     results: Array.from(mock.results),
   }))
@@ -162,7 +239,7 @@ function _run(
     try {
       result = next(iterator, nextValue)
     } catch (error) {
-      if (!errorToCatch.pattern) throw error
+      if (!state.errorToCatch.pattern) throw error
       output.error = error
       break
     }
@@ -186,7 +263,9 @@ function _run(
   }
 
   checkMocks(mocks, _run)
-  checkErrorToCatch(errorToCatch, output.error, _run)
+  checkAssertions(state.assertions, output, _run)
+  checkErrorToCatch(state.errorToCatch, output.error, _run)
+
   return output
 }
 
@@ -221,6 +300,14 @@ function checkMocks(mocks: Mock[], ssf: Function) {
   }
 }
 
+function checkAssertions(
+  assertions: Assertion[],
+  output: SagaOutput,
+  ssf: Function,
+) {
+  assertions.forEach(assertion => assertion(output))
+}
+
 function checkErrorToCatch(
   errorToCatch: ErrorToCatch,
   thrownError: Error | undefined,
@@ -237,10 +324,6 @@ function checkErrorToCatch(
   }
 
   if (!matchError(thrownError, errorToCatch.pattern)) {
-    thrownError.message =
-      'Mismatch between the error pattern and the error thrown by the saga\n\n' +
-      `Error pattern:\n\n${stringify(errorToCatch.pattern)}\n\n` +
-      `Thrown error:\n\n${stringify(thrownError)}`
     throw thrownError
   }
 }
