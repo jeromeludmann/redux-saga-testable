@@ -24,10 +24,15 @@ export interface SagaRunner {
      * Asserts that the saga throws an error.
      */
     throw(error: ErrorPattern): SagaRunner
+
+    /**
+     * Negates the next assertion.
+     */
+    not: SagaRunner['should']
   }
 
   /**
-   * Catches an error thrown by the saga.
+   * Catches an error thrown by the saga (alias of `should.throw()`).
    */
   catch(error: ErrorPattern): SagaRunner
 
@@ -61,20 +66,31 @@ export function use<Saga extends (...args: any[]) => any>(
   }
 
   const mocks: Mock[] = []
-  const errorToCatch: ErrorToCatch = {}
+  const throwable: Throwable = {}
   const assertions: Assertion[] = []
-  const runner: any = {} // will be a SagaRunner
+  const runner: any = {}
 
   runner.mock = _mock.bind(runner, mocks)
+  runner.catch = (pattern: ErrorPattern) => runner.should.throw(pattern)
+  runner.run = _run.bind(null, { mocks, throwable, assertions }, saga, args)
+
+  let negated = false
+  const isNegated = () => negated
 
   runner.should = {
-    yield: _yield.bind(runner, assertions),
-    return: _return.bind(runner, assertions),
-    throw: _throw.bind(runner, assertions, errorToCatch),
+    yield: _yield.bind(runner, assertions, isNegated),
+    return: _return.bind(runner, assertions, isNegated),
+    throw: _throw.bind(runner, assertions, throwable, isNegated),
   }
 
-  runner.catch = _catch.bind(runner, errorToCatch)
-  runner.run = _run.bind(null, { mocks, errorToCatch, assertions }, saga, args)
+  // add "not" feature to "should" interface
+  runner.should.not = runner.should
+  runner.should = new Proxy(runner.should, {
+    get(target: any, key) {
+      negated = key === 'not'
+      return target[key]
+    },
+  })
 
   return runner
 }
@@ -129,12 +145,15 @@ function _mock(
     )
   }
 
-  const provided = mocks.find(mock => isDeepStrictEqual(mock.effect, effect))
-  if (provided) {
+  const mockAlreadyProvided = mocks.find(mock =>
+    isDeepStrictEqual(mock.effect, effect),
+  )
+
+  if (mockAlreadyProvided) {
     throw failure(
       'Mock results already provided\n\n' +
         `Given effect:\n\n${stringify(effect)}\n\n` +
-        `Existing mock results:\n\n${stringify(provided.results)}`,
+        `Existing mock results:\n\n${stringify(mockAlreadyProvided.results)}`,
       _mock,
     )
   }
@@ -145,9 +164,16 @@ function _mock(
 
 type Assertion = (output: SagaOutput) => void
 
-function _yield(this: SagaRunner, assertions: Assertion[], effect: Effect) {
+function _yield(
+  this: SagaRunner,
+  assertions: Assertion[],
+  isNegated: () => boolean,
+  effect: Effect,
+) {
+  const assert = createAssert(isNegated())
+
   assertions.push(output => {
-    if (!output.effects.some(e => isDeepStrictEqual(e, effect))) {
+    if (!assert(output.effects.some(e => isDeepStrictEqual(e, effect)))) {
       throw failure(
         'Assertion failure\n\n' +
           `Expected effect:\n\n${stringify(effect)}\n\n` +
@@ -160,9 +186,16 @@ function _yield(this: SagaRunner, assertions: Assertion[], effect: Effect) {
   return this
 }
 
-function _return(this: SagaRunner, assertions: Assertion[], value: any) {
+function _return(
+  this: SagaRunner,
+  assertions: Assertion[],
+  isNegated: () => boolean,
+  value: any,
+) {
+  const assert = createAssert(isNegated())
+
   assertions.push(output => {
-    if (!isDeepStrictEqual(output.return, value)) {
+    if (!assert(isDeepStrictEqual(output.return, value))) {
       throw failure(
         'Assertion failure\n\n' +
           `Expected return value:\n\n${stringify(value)}\n\n` +
@@ -175,14 +208,34 @@ function _return(this: SagaRunner, assertions: Assertion[], value: any) {
   return this
 }
 
+interface Throwable {
+  pattern?: ErrorPattern
+}
+
 function _throw(
   this: SagaRunner,
   assertions: Assertion[],
-  errorToCatch: ErrorToCatch,
+  throwable: Throwable,
+  isNegated: () => boolean,
   pattern: ErrorPattern,
 ) {
+  if (!pattern) {
+    throw failure('Missing error pattern argument', _throw)
+  }
+
+  const negated = isNegated()
+  const assert = createAssert(negated)
+
   assertions.push(output => {
-    if (!output.error || !matchError(output.error, pattern)) {
+    if (!output.error) {
+      throw failure(
+        'No error thrown by the saga\n\n' +
+          `Given error pattern:\n\n${stringify(throwable.pattern)}`,
+        _run,
+      )
+    }
+
+    if (!assert(matchError(output.error, pattern))) {
       throw failure(
         'Assertion failure\n\n' +
           `Expected error pattern:\n\n${stringify(pattern)}\n\n` +
@@ -192,37 +245,27 @@ function _throw(
     }
   })
 
-  errorToCatch.pattern = pattern
+  if (!negated) {
+    if (throwable.pattern) {
+      throw failure(
+        'Error pattern already provided\n\n' +
+          `Given error pattern:\n\n${stringify(throwable.pattern)}`,
+        _throw,
+      )
+    }
+
+    throwable.pattern = pattern
+  }
+
   return this
 }
 
-interface ErrorToCatch {
-  pattern?: ErrorPattern
-}
-
-function _catch(
-  this: SagaRunner,
-  errorToCatch: ErrorToCatch,
-  pattern: ErrorPattern,
-) {
-  if (!pattern) {
-    throw failure('Missing error pattern argument', _catch)
-  }
-
-  if (errorToCatch.pattern) {
-    throw failure(
-      'Error pattern already provided\n\n' +
-        `Given error pattern:\n\n${stringify(errorToCatch.pattern)}`,
-      _catch,
-    )
-  }
-
-  errorToCatch.pattern = pattern
-  return this
+function createAssert(negated: boolean) {
+  return (condition: boolean) => (negated ? !condition : condition)
 }
 
 function _run(
-  state: { mocks: Mock[]; errorToCatch: ErrorToCatch; assertions: Assertion[] },
+  state: { mocks: Mock[]; throwable: Throwable; assertions: Assertion[] },
   saga: Saga,
   args: any[],
 ) {
@@ -239,7 +282,7 @@ function _run(
     try {
       result = next(iterator, nextValue)
     } catch (error) {
-      if (!state.errorToCatch.pattern) throw error
+      if (!state.throwable.pattern) throw error
       output.error = error
       break
     }
@@ -263,8 +306,7 @@ function _run(
   }
 
   checkMocks(mocks, _run)
-  checkAssertions(state.assertions, output, _run)
-  checkErrorToCatch(state.errorToCatch, output.error, _run)
+  checkAssertions(state.assertions, output)
 
   return output
 }
@@ -288,44 +330,20 @@ function extractMockResult(mocks: Mock[], effect: Effect) {
 }
 
 function checkMocks(mocks: Mock[], ssf: Function) {
-  const unused = mocks.find(mock => mock.results.length > 0)
+  const unusedMock = mocks.find(mock => mock.results.length > 0)
 
-  if (unused) {
+  if (unusedMock) {
     throw failure(
       'Unused mock results\n\n' +
-        `Given effect:\n\n${stringify(unused.effect)}\n\n` +
-        `Unused mock results:\n\n${stringify(unused.results)}`,
+        `Given effect:\n\n${stringify(unusedMock.effect)}\n\n` +
+        `Unused mock results:\n\n${stringify(unusedMock.results)}`,
       ssf,
     )
   }
 }
 
-function checkAssertions(
-  assertions: Assertion[],
-  output: SagaOutput,
-  ssf: Function,
-) {
+function checkAssertions(assertions: Assertion[], output: SagaOutput) {
   assertions.forEach(assertion => assertion(output))
-}
-
-function checkErrorToCatch(
-  errorToCatch: ErrorToCatch,
-  thrownError: Error | undefined,
-  ssf: Function,
-) {
-  if (!errorToCatch.pattern) return
-
-  if (!thrownError) {
-    throw failure(
-      'No error thrown by the saga\n\n' +
-        `Error pattern:\n\n${stringify(errorToCatch.pattern)}`,
-      ssf,
-    )
-  }
-
-  if (!matchError(thrownError, errorToCatch.pattern)) {
-    throw thrownError
-  }
 }
 
 function matchError(error: Error, pattern: ErrorPattern) {
