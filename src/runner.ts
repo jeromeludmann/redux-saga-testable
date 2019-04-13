@@ -28,7 +28,7 @@ export interface SagaRunner {
     /**
      * Negates the next assertion.
      */
-    not: SagaRunner['should']
+    not: Pick<SagaRunner['should'], Exclude<keyof SagaRunner['should'], 'not'>>
   }
 
   /**
