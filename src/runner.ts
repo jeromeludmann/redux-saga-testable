@@ -9,18 +9,50 @@ export interface SagaRunner {
    */
   mock(effect: Effect, result: any, ...nextResults: any[]): SagaRunner
 
+  should: {
+    /**
+     * Asserts that the saga yields an effect.
+     */
+    yield(effect: Effect): SagaRunner
+
+    /**
+     * Asserts that the saga returns a value.
+     */
+    return(value: any): SagaRunner
+
+    /**
+     * Asserts that the saga throws an error.
+     */
+    throw(error: ErrorPattern): SagaRunner
+
+    /**
+     * Negates the next assertion.
+     */
+    not: Pick<SagaRunner['should'], Exclude<keyof SagaRunner['should'], 'not'>>
+  }
+
   /**
-   * Catches an error thrown by the saga.
+   * Catches an error thrown by the saga (alias of `should.throw()`).
    */
-  catch(
-    error: string | RegExp | Error | { new (...args: any[]): any },
-  ): SagaRunner
+  catch(error: ErrorPattern): SagaRunner
 
   /**
    * Runs the saga.
    */
   run(): SagaOutput
 }
+
+export interface SagaOutput {
+  effects: Effect[]
+  return?: any
+  error?: Error
+}
+
+export type ErrorPattern =
+  | string
+  | RegExp
+  | Error
+  | { new (...args: any[]): any }
 
 /**
  * Creates a saga runner.
@@ -34,14 +66,31 @@ export function use<Saga extends (...args: any[]) => any>(
   }
 
   const mocks: Mock[] = []
-  const errorToCatch: ErrorToCatch = {}
-  const getRunner = () => runner
+  const throwable: Throwable = {}
+  const assertions: Assertion[] = []
+  const runner: any = {}
 
-  const runner: SagaRunner = {
-    mock: _mock.bind(null, mocks, getRunner),
-    catch: _catch.bind(null, errorToCatch, getRunner),
-    run: _run.bind(null, mocks, errorToCatch, saga, args),
+  runner.mock = _mock.bind(runner, mocks)
+  runner.catch = (pattern: ErrorPattern) => runner.should.throw(pattern)
+  runner.run = _run.bind(null, { mocks, throwable, assertions }, saga, args)
+
+  let negated = false
+  const isNegated = () => negated
+
+  runner.should = {
+    yield: _yield.bind(runner, assertions, isNegated),
+    return: _return.bind(runner, assertions, isNegated),
+    throw: _throw.bind(runner, assertions, throwable, isNegated),
   }
+
+  // add "not" feature to "should" interface
+  runner.should.not = runner.should
+  runner.should = new Proxy(runner.should, {
+    get(target: any, key) {
+      negated = key === 'not'
+      return target[key]
+    },
+  })
 
   return runner
 }
@@ -79,8 +128,8 @@ interface Mock {
 }
 
 function _mock(
+  this: SagaRunner,
   mocks: Mock[],
-  getRunner: () => SagaRunner,
   effect: Effect,
   ...results: any[]
 ) {
@@ -96,56 +145,127 @@ function _mock(
     )
   }
 
-  const provided = mocks.find(mock => isDeepStrictEqual(mock.effect, effect))
-  if (provided) {
+  const mockAlreadyProvided = mocks.find(mock =>
+    isDeepStrictEqual(mock.effect, effect),
+  )
+
+  if (mockAlreadyProvided) {
     throw failure(
       'Mock results already provided\n\n' +
         `Given effect:\n\n${stringify(effect)}\n\n` +
-        `Existing mock results:\n\n${stringify(provided.results)}`,
+        `Existing mock results:\n\n${stringify(mockAlreadyProvided.results)}`,
       _mock,
     )
   }
 
   mocks.push({ effect, results })
-  return getRunner()
+  return this
 }
 
-interface ErrorToCatch {
+type Assertion = (output: SagaOutput) => void
+
+function _yield(
+  this: SagaRunner,
+  assertions: Assertion[],
+  isNegated: () => boolean,
+  effect: Effect,
+) {
+  const assert = createAssert(isNegated())
+
+  assertions.push(output => {
+    if (!assert(output.effects.some(e => isDeepStrictEqual(e, effect)))) {
+      throw failure(
+        'Assertion failure\n\n' +
+          `Expected effect:\n\n${stringify(effect)}\n\n` +
+          `Received effects:\n\n${stringify(output.effects)}`,
+        _run,
+      )
+    }
+  })
+
+  return this
+}
+
+function _return(
+  this: SagaRunner,
+  assertions: Assertion[],
+  isNegated: () => boolean,
+  value: any,
+) {
+  const assert = createAssert(isNegated())
+
+  assertions.push(output => {
+    if (!assert(isDeepStrictEqual(output.return, value))) {
+      throw failure(
+        'Assertion failure\n\n' +
+          `Expected return value:\n\n${stringify(value)}\n\n` +
+          `Received return value:\n\n${stringify(output.return)}`,
+        _run,
+      )
+    }
+  })
+
+  return this
+}
+
+interface Throwable {
   pattern?: ErrorPattern
 }
 
-type ErrorPattern = Parameters<SagaRunner['catch']>[0]
-
-function _catch(
-  errorToCatch: ErrorToCatch,
-  getRunner: () => SagaRunner,
+function _throw(
+  this: SagaRunner,
+  assertions: Assertion[],
+  throwable: Throwable,
+  isNegated: () => boolean,
   pattern: ErrorPattern,
 ) {
   if (!pattern) {
-    throw failure('Missing error pattern argument', _catch)
+    throw failure('Missing error pattern argument', _throw)
   }
 
-  if (errorToCatch.pattern) {
-    throw failure(
-      'Error pattern already provided\n\n' +
-        `Given error pattern:\n\n${stringify(errorToCatch.pattern)}`,
-      _catch,
-    )
+  const negated = isNegated()
+  const assert = createAssert(negated)
+
+  assertions.push(output => {
+    if (!output.error) {
+      throw failure(
+        'No error thrown by the saga\n\n' +
+          `Given error pattern:\n\n${stringify(throwable.pattern)}`,
+        _run,
+      )
+    }
+
+    if (!assert(matchError(output.error, pattern))) {
+      throw failure(
+        'Assertion failure\n\n' +
+          `Expected error pattern:\n\n${stringify(pattern)}\n\n` +
+          `Received thrown error:\n\n${stringify(output.error)}`,
+        _run,
+      )
+    }
+  })
+
+  if (!negated) {
+    if (throwable.pattern) {
+      throw failure(
+        'Error pattern already provided\n\n' +
+          `Given error pattern:\n\n${stringify(throwable.pattern)}`,
+        _throw,
+      )
+    }
+
+    throwable.pattern = pattern
   }
 
-  errorToCatch.pattern = pattern
-  return getRunner()
+  return this
 }
 
-export interface SagaOutput {
-  effects: Effect[]
-  return?: any
-  error?: Error
+function createAssert(negated: boolean) {
+  return (condition: boolean) => (negated ? !condition : condition)
 }
 
 function _run(
-  mocks: Mock[],
-  errorToCatch: ErrorToCatch,
+  state: { mocks: Mock[]; throwable: Throwable; assertions: Assertion[] },
   saga: Saga,
   args: any[],
 ) {
@@ -153,7 +273,7 @@ function _run(
   const iterator = saga(...args)
   let result, nextValue
 
-  mocks = mocks.map(mock => ({
+  const mocks = state.mocks.map(mock => ({
     ...mock,
     results: Array.from(mock.results),
   }))
@@ -162,7 +282,7 @@ function _run(
     try {
       result = next(iterator, nextValue)
     } catch (error) {
-      if (!errorToCatch.pattern) throw error
+      if (!state.throwable.pattern) throw error
       output.error = error
       break
     }
@@ -186,7 +306,8 @@ function _run(
   }
 
   checkMocks(mocks, _run)
-  checkErrorToCatch(errorToCatch, output.error, _run)
+  checkAssertions(state.assertions, output)
+
   return output
 }
 
@@ -209,40 +330,20 @@ function extractMockResult(mocks: Mock[], effect: Effect) {
 }
 
 function checkMocks(mocks: Mock[], ssf: Function) {
-  const unused = mocks.find(mock => mock.results.length > 0)
+  const unusedMock = mocks.find(mock => mock.results.length > 0)
 
-  if (unused) {
+  if (unusedMock) {
     throw failure(
       'Unused mock results\n\n' +
-        `Given effect:\n\n${stringify(unused.effect)}\n\n` +
-        `Unused mock results:\n\n${stringify(unused.results)}`,
+        `Given effect:\n\n${stringify(unusedMock.effect)}\n\n` +
+        `Unused mock results:\n\n${stringify(unusedMock.results)}`,
       ssf,
     )
   }
 }
 
-function checkErrorToCatch(
-  errorToCatch: ErrorToCatch,
-  thrownError: Error | undefined,
-  ssf: Function,
-) {
-  if (!errorToCatch.pattern) return
-
-  if (!thrownError) {
-    throw failure(
-      'No error thrown by the saga\n\n' +
-        `Error pattern:\n\n${stringify(errorToCatch.pattern)}`,
-      ssf,
-    )
-  }
-
-  if (!matchError(thrownError, errorToCatch.pattern)) {
-    thrownError.message =
-      'Mismatch between the error pattern and the error thrown by the saga\n\n' +
-      `Error pattern:\n\n${stringify(errorToCatch.pattern)}\n\n` +
-      `Thrown error:\n\n${stringify(thrownError)}`
-    throw thrownError
-  }
+function checkAssertions(assertions: Assertion[], output: SagaOutput) {
+  assertions.forEach(assertion => assertion(output))
 }
 
 function matchError(error: Error, pattern: ErrorPattern) {
