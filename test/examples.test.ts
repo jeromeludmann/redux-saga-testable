@@ -20,26 +20,20 @@ test('fetchUser() should dispatch FETCH_SUCCESS', () => {
   const id = 123
   const mockUser = { user: 'name' }
 
-  const output = use(fetchUser, id)
+  use(fetchUser, id)
     .mock(call(service.getUser, id), mockUser)
+    .should.yield(put({ type: 'FETCH_SUCCESS', payload: mockUser }))
     .run()
-
-  expect(output.effects).toContainEqual(
-    put({ type: 'FETCH_SUCCESS', payload: mockUser }),
-  )
 })
 
 test('fetchUser() should dispatch FETCH_FAILURE', () => {
   const id = 456
   const mockError = new Error('Unable to fetch user')
 
-  const output = use(fetchUser, id)
+  use(fetchUser, id)
     .mock(call(service.getUser, id), throwError(mockError))
+    .should.yield(put({ type: 'FETCH_FAILURE', payload: mockError.message }))
     .run()
-
-  expect(output.effects).toContainEqual(
-    put({ type: 'FETCH_FAILURE', payload: mockError.message }),
-  )
 })
 
 function* watchNotify() {
@@ -54,12 +48,10 @@ function* watchNotify() {
 }
 
 test('watchNotify() should dispatch NOTIFY_END', () => {
-  const output = use(watchNotify)
+  use(watchNotify)
     .mock(call(service.notify), finalize())
+    .should.yield(put({ type: 'NOTIFY_END' }))
     .run()
-
-  expect(output.effects).toContainEqual(call(service.notify))
-  expect(output.effects).toContainEqual(put({ type: 'NOTIFY_END' }))
 })
 
 function* findUser(id: number) {
@@ -75,10 +67,8 @@ function* findUser(id: number) {
 test('findUser() should throw an error', () => {
   const id = 789
 
-  const output = use(findUser, id)
+  use(findUser, id)
     .mock(call(service.getUser, id), undefined)
-    .catch(/^Unable to find user/)
+    .should.throw(/^Unable to find user/)
     .run()
-
-  expect(output.error).toEqual(new Error(`Unable to find user ${id}`))
 })
