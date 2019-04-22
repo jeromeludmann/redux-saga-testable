@@ -22,17 +22,11 @@ describe('stringify()', () => {
   })
 
   test('stringifies an anonymous function', () => {
-    expect(stringify(function() {})).toEqual('  ƒ ')
+    expect(stringify(function() {})).toEqual('  ƒ <anonymous>')
   })
 
   test('stringifies a named function', () => {
     expect(stringify(function fn() {})).toEqual('  ƒ fn')
-  })
-
-  test('stringifies a named function with arguments', () => {
-    expect(stringify(function fn(arg1: number, arg2: string) {})).toEqual(
-      '  ƒ fn(arg1, arg2)',
-    )
   })
 
   test('stringifies an object', () => {
