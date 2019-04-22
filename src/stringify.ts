@@ -32,15 +32,7 @@ function stringifyValue(value: any, state: State): string {
       return `"${value}"`
 
     case 'function':
-      return value
-        .toString()
-        .replace(
-          /^function\s.*\((.*)\)\s{\s.*}$/,
-          (_: string, args: string) => {
-            const _args = args === '' ? '' : `(${args})`
-            return `\u0192 ${value.name}${_args}`
-          },
-        )
+      return `\u0192 ${value.name || '<anonymous>'}`
 
     case 'object':
       if (value === null) return 'null'
