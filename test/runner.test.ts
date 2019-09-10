@@ -218,6 +218,21 @@ describe('mock()', () => {
     )
   })
 
+  test('mocks with a "null" value', () => {
+    const saga = function*() {
+      const result1 = yield call(fn1)
+      yield put({ type: 'SUCCESS', payload: result1 })
+    }
+
+    const output = use(saga)
+      .mock(call(fn1), null)
+      .run()
+
+    expect(output.effects).toContainEqual(
+      put({ type: 'SUCCESS', payload: null }),
+    )
+  })
+
   test('does not mock the result of an effect that is not yielded', () => {
     const saga = function*() {
       yield put({ type: 'SUCCESS' })
