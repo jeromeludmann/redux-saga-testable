@@ -46,10 +46,14 @@ function stringifyValue(value: any, state: State): string {
 function stringifyObject(value: any, state: State): string {
   switch (value.constructor) {
     case Object:
-      const keys = Object.keys(value)
+      const keys: Array<string | symbol> = Object.keys(value)
+      keys.push(...Object.getOwnPropertySymbols(value))
+
       return stringifyWithTemplate(
         nextState =>
-          keys.map(key => `${key}: ${stringifyValue(value[key], nextState)}`),
+          keys.map(
+            key => `${String(key)}: ${stringifyValue(value[key], nextState)}`,
+          ),
         state,
         { size: keys.length },
       )
@@ -68,7 +72,7 @@ function stringifyObject(value: any, state: State): string {
 }
 
 export function stringifyWithTemplate(
-  stringifier: (nextParams: State) => string[],
+  stringifier: (nextParams: State) => Array<string | symbol>,
   state: State,
   opts: { prefix?: string; wrapper?: '{}' | '[]'; size?: number } = {},
 ) {
@@ -91,7 +95,7 @@ export function stringifyWithTemplate(
   if (elements.length === 0) return wrap()
 
   const indented = elements
-    .map((str: string) => `${nextState.totalSpace}${str}`)
+    .map((str: string | symbol) => `${nextState.totalSpace}${String(str)}`)
     .join(',\n')
 
   return `${wrap(`\n${indented}\n${state.totalSpace}`)}`
