@@ -60,6 +60,18 @@ describe('stringify()', () => {
   test('stringifies a Map', () => {
     expect(stringify(new Map())).toEqual('  [object Map]')
   })
+
+  test('stringifies a Symbol (as a key and as a value)', () => {
+    expect(
+      stringify({
+        [Symbol('key')]: { symbol: Symbol('value') },
+      }),
+    ).toEqual(`  {
+    Symbol(key): {
+      symbol: Symbol(value)
+    }
+  }`)
+  })
 })
 
 describe('stringifyWithTemplate()', () => {

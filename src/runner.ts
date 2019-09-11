@@ -312,7 +312,7 @@ function _run(
 }
 
 function next(iterator: IterableIterator<any>, value: any) {
-  if (typeof value === 'object') {
+  if (value !== null && typeof value === 'object') {
     if (THROW_ERROR in value) return iterator.throw!(value.error)
     if (FINALIZE in value) return iterator.return!()
   }
