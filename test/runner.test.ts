@@ -74,15 +74,44 @@ describe('run()', () => {
       yield put({ type: 'SUCCESS', payload: [result1, result2] })
     }
 
-    const runner = use(saga)
-    const output1 = runner.mock(call(fn1), 'result1').run()
-    const output2 = runner.mock(call(fn2), 'result2').run()
+    let runner = use(saga)
+    runner = runner.mock(call(fn1), 'result1')
+    const output1 = runner.run()
+    runner = runner.mock(call(fn2), 'result2')
+    const output2 = runner.run()
 
     expect(output1.effects).toContainEqual(
       put({ type: 'SUCCESS', payload: ['result1', undefined] }),
     )
     expect(output2.effects).toContainEqual(
       put({ type: 'SUCCESS', payload: ['result1', 'result2'] }),
+    )
+  })
+
+  test('runs a saga several times from multiple instances', () => {
+    const saga = function*() {
+      const result1 = yield call(fn1)
+      const result2 = yield call(fn2)
+      const result3 = yield call(fn3)
+      yield put({ type: 'SUCCESS', payload: [result1, result2, result3] })
+    }
+
+    const runner = use(saga)
+    const runner1 = runner.mock(call(fn1), 'result1')
+    const runner2 = runner.mock(call(fn2), 'result2')
+
+    const output1 = runner1.run()
+    const output2 = runner2.run()
+    const output3 = runner2.mock(call(fn3), 'result3').run()
+
+    expect(output1.effects).toContainEqual(
+      put({ type: 'SUCCESS', payload: ['result1', undefined, undefined] }),
+    )
+    expect(output2.effects).toContainEqual(
+      put({ type: 'SUCCESS', payload: [undefined, 'result2', undefined] }),
+    )
+    expect(output3.effects).toContainEqual(
+      put({ type: 'SUCCESS', payload: [undefined, 'result2', 'result3'] }),
     )
   })
 

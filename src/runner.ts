@@ -9,30 +9,13 @@ export interface SagaRunner {
    */
   mock(effect: Effect, result: any, ...nextResults: any[]): SagaRunner
 
-  should: {
-    /**
-     * Asserts that the saga yields an effect.
-     */
-    yield(effect: Effect): SagaRunner
-
-    /**
-     * Asserts that the saga returns a value.
-     */
-    return(value: any): SagaRunner
-
-    /**
-     * Asserts that the saga throws an error.
-     */
-    throw(error: ErrorPattern): SagaRunner
-
-    /**
-     * Negates the next assertion.
-     */
-    not: Pick<SagaRunner['should'], Exclude<keyof SagaRunner['should'], 'not'>>
-  }
+  /**
+   * Provides the assertion methods.
+   */
+  should: Should
 
   /**
-   * Catches an error thrown by the saga (alias of `should.throw()`).
+   * Catches silently an error thrown by the saga (alias of `should.throw()`).
    */
   catch(error: ErrorPattern): SagaRunner
 
@@ -42,12 +25,40 @@ export interface SagaRunner {
   run(): SagaOutput
 }
 
+export interface Should {
+  /**
+   * Asserts that the saga yields an effect.
+   */
+  yield(effect: Effect): SagaRunner
+
+  /**
+   * Asserts that the saga returns a value.
+   */
+  return(value: any): SagaRunner
+
+  /**
+   * Asserts that the saga throws an error.
+   */
+  throw(error: ErrorPattern): SagaRunner
+
+  /**
+   * Negates the next assertion.
+   */
+  not: Pick<Should, Exclude<keyof Should, 'not'>>
+}
+
+/**
+ * The saga output produced by run() method.
+ */
 export interface SagaOutput {
   effects: Effect[]
   return?: any
   error?: Error
 }
 
+/**
+ * The error pattern used to silently catch a thrown error.
+ */
 export type ErrorPattern =
   | string
   | RegExp
@@ -65,34 +76,14 @@ export function use<Saga extends (...args: any[]) => any>(
     throw failure('Missing saga argument', use)
   }
 
-  const mocks: Mock[] = []
-  const throwable: Throwable = {}
-  const assertions: Assertion[] = []
-  const runner: any = {}
-
-  runner.mock = _mock.bind(runner, mocks)
-  runner.catch = (pattern: ErrorPattern) => runner.should.throw(pattern)
-  runner.run = _run.bind(null, { mocks, throwable, assertions }, saga, args)
-
-  let negated = false
-  const isNegated = () => negated
-
-  runner.should = {
-    yield: _yield.bind(runner, assertions, isNegated),
-    return: _return.bind(runner, assertions, isNegated),
-    throw: _throw.bind(runner, assertions, throwable, isNegated),
-  }
-
-  // add "not" feature to "should" interface
-  runner.should.not = runner.should
-  runner.should = new Proxy(runner.should, {
-    get(target: any, key) {
-      negated = key === 'not'
-      return target[key]
+  return createRunner(
+    {
+      mocks: [],
+      assertions: [],
     },
-  })
-
-  return runner
+    saga,
+    args,
+  )
 }
 
 const THROW_ERROR = '@@redux-saga-testable/THROW_ERROR'
@@ -122,17 +113,57 @@ export function finalize(): Finalize {
   return { [FINALIZE]: true }
 }
 
+interface SagaRunnerState {
+  mocks: Mock[]
+  assertions: Assertion[]
+  errorPattern?: ErrorPattern
+}
+
+function createRunner(
+  state: SagaRunnerState,
+  saga: Saga,
+  args: Parameters<Saga>,
+): SagaRunner {
+  const runner: any = {}
+
+  runner.mock = _mock(state, saga, args)
+  runner.run = _run(state, saga, args)
+
+  // assertions
+
+  let negated = false
+  const isNegated = () => negated
+
+  runner.should = {
+    yield: _yield(state, isNegated, saga, args),
+    return: _return(state, isNegated, saga, args),
+    throw: _throw(state, isNegated, saga, args),
+  }
+
+  runner.should.not = runner.should
+  runner.should = new Proxy(runner.should, {
+    get(target: any, key) {
+      negated = key === 'not'
+      return target[key]
+    },
+  })
+
+  // aliases
+
+  runner.catch = runner.should.throw
+
+  return runner
+}
+
 interface Mock {
   effect: Effect
   results: any[]
 }
 
-function _mock(
-  this: SagaRunner,
-  mocks: Mock[],
+const _mock = (state: SagaRunnerState, saga: Saga, args: Parameters<Saga>) => (
   effect: Effect,
   ...results: any[]
-) {
+) => {
   if (!effect) {
     throw failure('Missing effect argument', _mock)
   }
@@ -145,7 +176,7 @@ function _mock(
     )
   }
 
-  const mockAlreadyProvided = mocks.find(mock =>
+  const mockAlreadyProvided = state.mocks.find(mock =>
     isDeepStrictEqual(mock.effect, effect),
   )
 
@@ -158,21 +189,27 @@ function _mock(
     )
   }
 
-  mocks.push({ effect, results })
-  return this
+  return createRunner(
+    {
+      ...state,
+      mocks: [...state.mocks, { effect, results }],
+    },
+    saga,
+    args,
+  )
 }
 
 type Assertion = (output: SagaOutput) => void
 
-function _yield(
-  this: SagaRunner,
-  assertions: Assertion[],
+const _yield = (
+  state: SagaRunnerState,
   isNegated: () => boolean,
-  effect: Effect,
-) {
+  saga: Saga,
+  args: Parameters<Saga>,
+) => (effect: Effect) => {
   const assert = createAssert(isNegated())
 
-  assertions.push(output => {
+  const newAssertion: Assertion = output => {
     if (!assert(output.effects.some(e => isDeepStrictEqual(e, effect)))) {
       throw failure(
         'Assertion failure\n\n' +
@@ -181,20 +218,27 @@ function _yield(
         _run,
       )
     }
-  })
+  }
 
-  return this
+  return createRunner(
+    {
+      ...state,
+      assertions: [...state.assertions, newAssertion],
+    },
+    saga,
+    args,
+  )
 }
 
-function _return(
-  this: SagaRunner,
-  assertions: Assertion[],
+const _return = (
+  state: SagaRunnerState,
   isNegated: () => boolean,
-  value: any,
-) {
+  saga: Saga,
+  args: Parameters<Saga>,
+) => (value: any) => {
   const assert = createAssert(isNegated())
 
-  assertions.push(output => {
+  const newAssertion: Assertion = output => {
     if (!assert(isDeepStrictEqual(output.return, value))) {
       throw failure(
         'Assertion failure\n\n' +
@@ -203,22 +247,24 @@ function _return(
         _run,
       )
     }
-  })
+  }
 
-  return this
+  return createRunner(
+    {
+      ...state,
+      assertions: [...state.assertions, newAssertion],
+    },
+    saga,
+    args,
+  )
 }
 
-interface Throwable {
-  pattern?: ErrorPattern
-}
-
-function _throw(
-  this: SagaRunner,
-  assertions: Assertion[],
-  throwable: Throwable,
+const _throw = (
+  state: SagaRunnerState,
   isNegated: () => boolean,
-  pattern: ErrorPattern,
-) {
+  saga: Saga,
+  args: Parameters<Saga>,
+) => (pattern: ErrorPattern) => {
   if (!pattern) {
     throw failure('Missing error pattern argument', _throw)
   }
@@ -226,11 +272,11 @@ function _throw(
   const negated = isNegated()
   const assert = createAssert(negated)
 
-  assertions.push(output => {
+  const newAssertion: Assertion = output => {
     if (!output.error) {
       throw failure(
         'No error thrown by the saga\n\n' +
-          `Given error pattern:\n\n${stringify(throwable.pattern)}`,
+          `Given error pattern:\n\n${stringify(state.errorPattern)}`,
         _run,
       )
     }
@@ -243,36 +289,38 @@ function _throw(
         _run,
       )
     }
-  })
-
-  if (!negated) {
-    if (throwable.pattern) {
-      throw failure(
-        'Error pattern already provided\n\n' +
-          `Given error pattern:\n\n${stringify(throwable.pattern)}`,
-        _throw,
-      )
-    }
-
-    throwable.pattern = pattern
   }
 
-  return this
+  if (!negated && state.errorPattern) {
+    throw failure(
+      'Error pattern already provided\n\n' +
+        `Given error pattern:\n\n${stringify(state.errorPattern)}`,
+      _throw,
+    )
+  }
+
+  const newState = {
+    ...state,
+    assertions: [...state.assertions, newAssertion],
+  }
+
+  if (!negated) {
+    newState.errorPattern = pattern
+  }
+
+  return createRunner(newState, saga, args)
 }
 
 function createAssert(negated: boolean) {
   return (condition: boolean) => (negated ? !condition : condition)
 }
 
-function _run(
-  state: { mocks: Mock[]; throwable: Throwable; assertions: Assertion[] },
-  saga: Saga,
-  args: any[],
-) {
+const _run = (state: SagaRunnerState, saga: Saga, args: any[]) => () => {
   const output: SagaOutput = { effects: [] }
   const iterator = saga(...args)
   let result, nextValue
 
+  // prevents run() from mutating state
   const mocks = state.mocks.map(mock => ({
     ...mock,
     results: Array.from(mock.results),
@@ -282,7 +330,7 @@ function _run(
     try {
       result = next(iterator, nextValue)
     } catch (error) {
-      if (!state.throwable.pattern) throw error
+      if (!state.errorPattern) throw error
       output.error = error
       break
     }
