@@ -1,6 +1,9 @@
 import { isDeepStrictEqual } from 'util'
-import { Effect, Saga } from '@redux-saga/types'
+import { Action } from 'redux'
+import { PuttableChannel, END, TakeableChannel } from 'redux-saga'
+import { put, call, take, ChannelPutEffect } from 'redux-saga/effects'
 import { IO } from '@redux-saga/symbols'
+import { Effect, Saga, ActionPattern, Pattern } from '@redux-saga/types'
 import { stringify } from './stringify'
 
 export interface SagaRunner {
@@ -45,10 +48,69 @@ export interface Should {
    * Negates the next assertion.
    */
   not: Pick<Should, Exclude<keyof Should, 'not'>>
+
+  /**
+   * Asserts that the saga emits a PUT effect.
+   *
+   * Shortcut for `should.yield(put(...))`
+   */
+  put<A extends Action>(action: A): SagaRunner
+
+  put<T>(channel: PuttableChannel<T>, action: T | END): ChannelPutEffect<T>
+
+  /**
+   * Asserts that the saga emits a CALL effect.
+   *
+   * Shortcut for `should.yield(call(...))`
+   */
+  call<Fn extends (...args: any[]) => any>(
+    fn: Fn,
+    ...args: Parameters<Fn>
+  ): SagaRunner
+
+  call<
+    Ctx extends { [P in Name]: (this: Ctx, ...args: any[]) => any },
+    Name extends string
+  >(
+    ctxAndFnName: [Ctx, Name],
+    ...args: Parameters<Ctx[Name]>
+  ): SagaRunner
+
+  call<
+    Ctx extends { [P in Name]: (this: Ctx, ...args: any[]) => any },
+    Name extends string
+  >(
+    ctxAndFnName: { context: Ctx; fn: Name },
+    ...args: Parameters<Ctx[Name]>
+  ): SagaRunner
+
+  call<Ctx, Fn extends (this: Ctx, ...args: any[]) => any>(
+    ctxAndFn: [Ctx, Fn],
+    ...args: Parameters<Fn>
+  ): SagaRunner
+
+  call<Ctx, Fn extends (this: Ctx, ...args: any[]) => any>(
+    ctxAndFn: { context: Ctx; fn: Fn },
+    ...args: Parameters<Fn>
+  ): SagaRunner
+
+  /**
+   * Asserts that the saga emits a TAKE effect.
+   *
+   * Shortcut for `should.yield(take(...))`
+   */
+  take(pattern?: ActionPattern): SagaRunner
+
+  take<A extends Action>(pattern?: ActionPattern<A>): SagaRunner
+
+  take<T>(
+    channel: TakeableChannel<T>,
+    multicastPattern?: Pattern<T>,
+  ): SagaRunner
 }
 
 /**
- * The saga output produced by run() method.
+ * The saga output produced by `run()` method.
  */
 export interface SagaOutput {
   effects: Effect[]
@@ -76,14 +138,7 @@ export function use<Saga extends (...args: any[]) => any>(
     throw failure('Missing saga argument', use)
   }
 
-  return createRunner(
-    {
-      mocks: [],
-      assertions: [],
-    },
-    saga,
-    args,
-  )
+  return createRunner({ mocks: [], assertions: [] }, saga, args)
 }
 
 const THROW_ERROR = '@@redux-saga-testable/THROW_ERROR'
@@ -151,6 +206,16 @@ function createRunner(
   // aliases
 
   runner.catch = runner.should.throw
+
+  // effect assertion shortcuts
+
+  const makeEffectShortcut = (effectCreator: (...args: any[]) => Effect) => (
+    ...args: any[]
+  ) => runner.should.yield(effectCreator(...args))
+
+  runner.should.put = makeEffectShortcut(put)
+  runner.should.call = makeEffectShortcut(call)
+  runner.should.take = makeEffectShortcut(take)
 
   return runner
 }

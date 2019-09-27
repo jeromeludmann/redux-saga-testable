@@ -44,6 +44,7 @@
     "typescript": "^3.4.3"
   },
   "peerDependencies": {
+    "redux": "4.0.x",
     "redux-saga": "1.0.x"
   }
 }

@@ -1,4 +1,4 @@
-import { put, call, Effect } from 'redux-saga/effects'
+import { put, call, take, Effect } from 'redux-saga/effects'
 import { use, throwError, finalize, SagaRunner } from '../src/runner'
 
 const fn1 = () => {}
@@ -19,6 +19,9 @@ describe('use()', () => {
     expect(runner).toHaveProperty('should.yield')
     expect(runner).toHaveProperty('should.return')
     expect(runner).toHaveProperty('should.throw')
+    expect(runner).toHaveProperty('should.put')
+    expect(runner).toHaveProperty('should.call')
+    expect(runner).toHaveProperty('should.take')
     expect(runner).toHaveProperty('catch')
     expect(runner).toHaveProperty('run')
   })
@@ -574,5 +577,41 @@ describe('should.throw()', () => {
         .run()
 
     expect(runSaga).toThrow('Assertion failure')
+  })
+})
+
+describe('should.put()', () => {
+  const saga = function*() {
+    yield put({ type: 'SUCCESS' })
+  }
+
+  test('asserts that the saga emits PUT effect', () => {
+    use(saga)
+      .should.put({ type: 'SUCCESS' })
+      .run()
+  })
+})
+
+describe('should.call()', () => {
+  const saga = function*() {
+    yield call(fn1)
+  }
+
+  test('asserts that the saga emits CALL effect', () => {
+    use(saga)
+      .should.call(fn1)
+      .run()
+  })
+})
+
+describe('should.take()', () => {
+  const saga = function*() {
+    yield take('FETCH')
+  }
+
+  test('asserts that the saga emits TAKE effect', () => {
+    use(saga)
+      .should.take('FETCH')
+      .run()
   })
 })
