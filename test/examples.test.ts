@@ -22,7 +22,7 @@ test('fetchUser() should dispatch FETCH_SUCCESS', () => {
 
   createRunner(fetchUser, id)
     .inject(call(service.getUser, id), mockUser)
-    .should.yield(put({ type: 'FETCH_SUCCESS', payload: mockUser }))
+    .should.put({ type: 'FETCH_SUCCESS', payload: mockUser })
     .run()
 })
 
@@ -32,7 +32,7 @@ test('fetchUser() should dispatch FETCH_FAILURE', () => {
 
   createRunner(fetchUser, id)
     .inject(call(service.getUser, id), throwError(mockError))
-    .should.yield(put({ type: 'FETCH_FAILURE', payload: mockError.message }))
+    .should.put({ type: 'FETCH_FAILURE', payload: mockError.message })
     .run()
 })
 
@@ -50,7 +50,7 @@ function* watchNotify() {
 test('watchNotify() should dispatch NOTIFY_END', () => {
   createRunner(watchNotify)
     .inject(call(service.notify), finalize())
-    .should.yield(put({ type: 'NOTIFY_END' }))
+    .should.put({ type: 'NOTIFY_END' })
     .run()
 })
 

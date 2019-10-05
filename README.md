@@ -1,6 +1,6 @@
 # redux-saga-testable
 
-Practical unit test library for [`redux-saga`](https://github.com/redux-saga/redux-saga) providing features like effects recording, easy mocking and built-in assertions.
+Practical unit test library for [`redux-saga`](https://github.com/redux-saga/redux-saga) providing features like effects recording, values injection and built-in assertions.
 
 [![Build Status](https://travis-ci.org/jeromeludmann/redux-saga-testable.svg)](https://travis-ci.org/jeromeludmann/redux-saga-testable)
 [![Coverage Status](https://coveralls.io/repos/github/jeromeludmann/redux-saga-testable/badge.svg)](https://coveralls.io/github/jeromeludmann/redux-saga-testable)
@@ -10,7 +10,7 @@ Practical unit test library for [`redux-saga`](https://github.com/redux-saga/red
 
 The drawback is that we have to manually iterate over the generator function for each yielded effect. It makes the tests not very intuitive to write and noisy to read.
 
-When testing a saga, we should not have to worry about what the generator function does behind. We would just like to mock some results instead of triggering side effects. This simple library tries to make it easier.
+When testing a saga, we should not have to worry about what the generator function does behind. We would just like to check some arbitrary effects and eventually inject some values instead of triggering side effects. This simple library tries to make it easier.
 
 ## Table of contents
 
@@ -60,46 +60,46 @@ function* fetchUser(id: number) {
 In order to test the nominal case of this saga, a simple test would be written as following:
 
 ```ts
-import { use } from 'redux-saga-testable'
+import { createRunner } from 'redux-saga-testable'
 
 test('fetchUser() should dispatch FETCH_SUCCESS', () => {
   const id = 123
   const mockUser = { user: 'name' }
 
-  use(fetchUser, id)
-    .mock(call(service.getUser, id), mockUser)
-    .should.yield(put({ type: 'FETCH_SUCCESS', payload: mockUser }))
+  createRunner(fetchUser, id)
+    .inject(call(service.getUser, id), mockUser)
+    .should.put({ type: 'FETCH_SUCCESS', payload: mockUser })
     .run()
 })
 ```
 
-[`runner.use()`](#usesaga-args) creates a [`SagaRunner`](#sagarunner) object that exposes methods allowing to set up the behavior of the runner.
+[`createRunner(fetchUser, id)`](#createrunnersaga-args) creates a [`SagaRunner`](#sagarunner) object that exposes methods allowing to set up the behavior of the runner.
 
-[`runner.mock()`](#runnermockeffect-result-results) allows to provide a mock result of an effect yielded by the saga.
+[`.inject(call(service.getUser, id), mockUser)`](#runnerinjecteffect-value--nextvalues) allows to inject values into the saga when an effect is yielded.
 
-[`runner.should.yield()`](#runnershouldyieldeffect) asserts that the saga yields a specific effect.
+[`.should.put({ type: 'FETCH_SUCCESS', payload: mockUser })`](#runnershouldyieldeffect) asserts that the saga yields a `PUT` effect (you can assert with any effect creator).
 
-[`runner.run()`](#runnerrun) executes the saga and returns a [`SagaOutput`](#sagaoutput) object containing all the `effects` yielded by the saga, and optionally a `return` value or an `error`. Note that `runner.run()` **must be the last method call** of the chain.
+[`.run()`](#runnerrun) executes the saga and returns a [`SagaOutput`](#sagaoutput) object containing all the `effects` yielded by the saga, and optionally a `return` value or an `error`. Note that `runner.run()` **must be the last method call of the chain and is always required to produce an output**.
 
 ### Test an error case
 
 You would also like to test the error case. It can be done using the [`throwError()`](#throwerrorerror) helper:
 
 ```ts
-import { use, throwError } from 'redux-saga-testable'
+import { createRunner, throwError } from 'redux-saga-testable'
 
 test('fetchUser() should dispatch FETCH_FAILURE', () => {
   const id = 456
   const mockError = new Error('Unable to fetch user')
 
-  use(fetchUser, id)
-    .mock(call(service.getUser, id), throwError(mockError))
-    .should.yield(put({ type: 'FETCH_FAILURE', payload: mockError.message }))
+  createRunner(fetchUser, id)
+    .inject(call(service.getUser, id), throwError(mockError))
+    .should.put({ type: 'FETCH_FAILURE', payload: mockError.message })
     .run()
 })
 ```
 
-[`throwError()`](#throwerrorerror) tells the runner that we want to mock an error that will be thrown when the saga will yield the given effect, instead of just assigning a simple value as a result of the effect.
+[`throwError()`](#throwerrorerror) tells the runner that we want to inject an error that **will be thrown** when the saga will yield the given effect, instead of just assigning a simple value as a result of the effect.
 
 ### Finalize a saga prematurely
 
@@ -118,15 +118,15 @@ function* watchNotify() {
 }
 ```
 
-You can do it by using [`finalize()`](#finalize) as a mock result:
+You can do it by inject [`finalize()`](#finalize) as a value:
 
 ```ts
-import { use, finalize } from 'redux-saga-testable'
+import { createRunner, finalize } from 'redux-saga-testable'
 
 test('watchNotify() should dispatch NOTIFY_END', () => {
-  use(watchNotify)
-    .mock(call(service.notify), finalize())
-    .should.yield(put({ type: 'NOTIFY_END' }))
+  createRunner(watchNotify)
+    .inject(call(service.notify), finalize())
+    .should.put({ type: 'NOTIFY_END' })
     .run()
 })
 ```
@@ -152,13 +152,13 @@ function* findUser(id: number) {
 When it is the expected behavior to test, we can invoke [`runner.should.throw()`](#runnershouldthrowerror) ([`runner.catch()`](#runnercatcherror) works the same way) in order to swallow the thrown error:
 
 ```ts
-import { use } from 'redux-saga-testable'
+import { createRunner } from 'redux-saga-testable'
 
 test('findUser() should throw an error', () => {
   const id = 789
 
-  use(findUser, id)
-    .mock(call(service.getUser, id), undefined)
+  createRunner(findUser, id)
+    .inject(call(service.getUser, id), undefined)
     .should.throw(/^Unable to find user/)
     .run()
 })
@@ -170,7 +170,7 @@ The runner will catch the error thrown by the saga and will record it under the 
 
 ## API
 
-### `use(saga[, ...args])`
+### `createRunner(saga[, ...args])`
 
 Creates a [SagaRunner](#sagarunner).
 
@@ -180,22 +180,22 @@ Creates a [SagaRunner](#sagarunner).
 Returns a [`SagaRunner`](#sagarunner).
 
 ```ts
-const runner = use(fetchUser, 'user_id')
+const runner = createRunner(fetchUser, 'user_id')
 ```
 
-### `runner.mock(effect, result[, ...nextResults])`
+### `runner.inject(effect, value [, ...nextValues])`
 
-Mocks the result of an effect.
+Injects a value into the saga when an effect is yielded.
 
 - `effect: Effect` - an effect to match
-- `result: any` - a mock result
-- `results?: any[]` - next mock results
+- `value: any` - a value to inject
+- `nextValues?: any[]` - next values to inject
 
 Returns the current [`SagaRunner`](#sagarunner).
 
 ```ts
-use(fetchUser, 'user_id')
-  .mock(call(getUser, 'user_id'), { name: 'mock name' })
+createRunner(fetchUser, 'user_id')
+  .inject(call(getUser, 'user_id'), { name: 'mock name' })
   .run()
 ```
 
@@ -213,7 +213,7 @@ Asserts that the saga yields an effect.
 Returns the current [`SagaRunner`](#sagarunner).
 
 ```ts
-use(fetchUser, 'user_id')
+createRunner(fetchUser, 'user_id')
   .should.yield(
     put({
       type: 'FETCH_USER_SUCCESS',
@@ -232,7 +232,7 @@ Asserts that the saga returns a value.
 Returns the current [`SagaRunner`](#sagarunner).
 
 ```ts
-use(fetchUser, 'user_id')
+createRunner(fetchUser, 'user_id')
   .should.return({ name: 'mock name' })
   .run()
 ```
@@ -253,7 +253,7 @@ Asserts that the saga throws an error.
 Returns the current [`SagaRunner`](#sagarunner).
 
 ```ts
-use(fetchUser, 'unknown_id')
+createRunner(fetchUser, 'unknown_id')
   .should.throw(/User not found/)
   .run()
 ```
@@ -274,7 +274,7 @@ Catches an error thrown by the saga (alias of [`runner.should.throw()`](#runners
 Returns the current [`SagaRunner`](#sagarunner).
 
 ```ts
-use(fetchUser, 'unknown_id')
+createRunner(fetchUser, 'unknown_id')
   .catch(/User not found/)
   .run()
 ```
@@ -286,40 +286,40 @@ Runs the saga.
 Returns a [`SagaOutput`](#sagaoutput).
 
 ```ts
-use(fetchUser).run()
+createRunner(fetchUser).run()
 ```
 
 ### `throwError(error)`
 
-Throws an error when used as a mock result.
+Throws an error from the saga when injected as a value.
 
 - `error: Error` - an error to throw
 
-Returns a `ThrowError` mock result.
+Returns a `ThrowError` value to inject.
 
 ```ts
-use(fetchUser)
-  .mock(getUser, throwError(new Error('Unable to get user')))
+createRunner(fetchUser)
+  .inject(getUser, throwError(new Error('Unable to get user')))
   .run()
 ```
 
 ### `finalize()`
 
-Finalizes the saga when used as a mock result.
+Finalizes the saga when injected as a value.
 
-Returns a `Finalize` mock result.
+Returns a `Finalize` value to inject.
 
 ```ts
-use(fetchUser)
-  .mock(getUser, finalize())
+createRunner(fetchUser)
+  .inject(getUser, finalize())
   .run()
 ```
 
 ### `SagaRunner`
 
-The saga runner object returned by [`use()`](#usesaga-args).
+The saga runner object returned by [`createRunner()`](#createrunnersaga-args).
 
-- [`mock: Function`](#runnermockeffect-result-nextresults)
+- [`inject: Function`](#runnerinjecteffect-value--nextvalues)
 - [`should.yield: Function`](#runnershouldyieldeffect)
 - [`should.return: Function`](#runnershouldreturnvalue)
 - [`should.throw: Function`](#runnershouldthrowerror)
