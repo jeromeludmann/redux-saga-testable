@@ -15,7 +15,7 @@ describe('use()', () => {
 
     const runner = use(saga)
 
-    expect(runner).toHaveProperty('mock')
+    expect(runner).toHaveProperty('inject')
     expect(runner).toHaveProperty('should.yield')
     expect(runner).toHaveProperty('should.return')
     expect(runner).toHaveProperty('should.throw')
@@ -77,11 +77,9 @@ describe('run()', () => {
       yield put({ type: 'SUCCESS', payload: [result1, result2] })
     }
 
-    let runner = use(saga)
-    runner = runner.mock(call(fn1), 'result1')
+    const runner = use(saga).inject(call(fn1), 'result1')
     const output1 = runner.run()
-    runner = runner.mock(call(fn2), 'result2')
-    const output2 = runner.run()
+    const output2 = runner.inject(call(fn2), 'result2').run()
 
     expect(output1.effects).toContainEqual(
       put({ type: 'SUCCESS', payload: ['result1', undefined] }),
@@ -100,12 +98,12 @@ describe('run()', () => {
     }
 
     const runner = use(saga)
-    const runner1 = runner.mock(call(fn1), 'result1')
-    const runner2 = runner.mock(call(fn2), 'result2')
+    const runner1 = runner.inject(call(fn1), 'result1')
+    const runner2 = runner.inject(call(fn2), 'result2')
 
     const output1 = runner1.run()
     const output2 = runner2.run()
-    const output3 = runner2.mock(call(fn3), 'result3').run()
+    const output3 = runner2.inject(call(fn3), 'result3').run()
 
     expect(output1.effects).toContainEqual(
       put({ type: 'SUCCESS', payload: ['result1', undefined, undefined] }),
@@ -162,23 +160,33 @@ describe('run()', () => {
   })
 })
 
-describe('mock()', () => {
-  test('mocks the result of an effect', () => {
+describe('inject()', () => {
+  test('injects a value', () => {
     const saga = function*() {
       const result = yield call(fn1)
       yield put({ type: 'SUCCESS', payload: result })
     }
 
     const output = use(saga)
-      .mock(call(fn1), 'result')
+      .inject(call(fn1), 'result')
       .run()
 
     expect(output.effects).toContainEqual(
       put({ type: 'SUCCESS', payload: 'result' }),
     )
+
+    // prevents breaking changes
+
+    const output2 = use(saga)
+      .mock(call(fn1), 'result')
+      .run()
+
+    expect(output2.effects).toContainEqual(
+      put({ type: 'SUCCESS', payload: 'result' }),
+    )
   })
 
-  test('mocks the result of an effect with throwError()', () => {
+  test('injects a thrown error', () => {
     const saga = function*() {
       try {
         const result = yield call(fn1)
@@ -189,7 +197,7 @@ describe('mock()', () => {
     }
 
     const output = use(saga)
-      .mock(call(fn1), throwError(sagaError))
+      .inject(call(fn1), throwError(sagaError))
       .run()
 
     expect(output.effects).toContainEqual(
@@ -197,7 +205,7 @@ describe('mock()', () => {
     )
   })
 
-  test('mocks the result of an effect with finalize()', () => {
+  test('injects a finalize signal', () => {
     const saga = function*() {
       try {
         yield call(fn1)
@@ -208,13 +216,13 @@ describe('mock()', () => {
     }
 
     const output = use(saga)
-      .mock(call(fn1), finalize())
+      .inject(call(fn1), finalize())
       .run()
 
     expect(output.effects).toEqual([call(fn1), put({ type: 'END' })])
   })
 
-  test('mocks the results of a same effect', () => {
+  test('injects values for a same effect', () => {
     const saga = function*() {
       const result1 = yield call(fn1)
       const result2 = yield call(fn1)
@@ -223,7 +231,7 @@ describe('mock()', () => {
     }
 
     const output = use(saga)
-      .mock(call(fn1), 'result1', 'result2', 'result3')
+      .inject(call(fn1), 'result1', 'result2', 'result3')
       .run()
 
     expect(output.effects).toContainEqual(
@@ -231,7 +239,7 @@ describe('mock()', () => {
     )
   })
 
-  test('mocks the results of several effects', () => {
+  test('injects values for different effects', () => {
     const saga = function*() {
       const result1 = yield call(fn1)
       const result2 = yield call(fn2)
@@ -240,9 +248,9 @@ describe('mock()', () => {
     }
 
     const output = use(saga)
-      .mock(call(fn1), 'result1')
-      .mock(call(fn2), 'result2')
-      .mock(call(fn3), 'result3')
+      .inject(call(fn1), 'result1')
+      .inject(call(fn2), 'result2')
+      .inject(call(fn3), 'result3')
       .run()
 
     expect(output.effects).toContainEqual(
@@ -250,14 +258,14 @@ describe('mock()', () => {
     )
   })
 
-  test('mocks with a "null" value', () => {
+  test('injects a "null" value', () => {
     const saga = function*() {
       const result1 = yield call(fn1)
       yield put({ type: 'SUCCESS', payload: result1 })
     }
 
     const output = use(saga)
-      .mock(call(fn1), null)
+      .inject(call(fn1), null)
       .run()
 
     expect(output.effects).toContainEqual(
@@ -265,20 +273,20 @@ describe('mock()', () => {
     )
   })
 
-  test('does not mock the result of an effect that is not yielded', () => {
+  test('does not inject a value for an effect that is not yielded', () => {
     const saga = function*() {
       yield put({ type: 'SUCCESS' })
     }
 
     const runSaga = () =>
       use(saga)
-        .mock(call(fn1), 'result')
+        .inject(call(fn1), 'result')
         .run()
 
-    expect(runSaga).toThrow('Unused mock results')
+    expect(runSaga).toThrow('Unused injection values')
   })
 
-  test('does not mock the result several times of a same effect', () => {
+  test('does not inject values several times for a same effect', () => {
     const saga = function*() {
       const result = call(fn1)
       yield put({ type: 'SUCCESS', payload: result })
@@ -286,14 +294,14 @@ describe('mock()', () => {
 
     const runSaga = () =>
       use(saga)
-        .mock(call(fn1), 'result1')
-        .mock(call(fn1), 'result2')
+        .inject(call(fn1), 'result1')
+        .inject(call(fn1), 'result2')
         .run()
 
-    expect(runSaga).toThrow('Mock results already provided')
+    expect(runSaga).toThrow('Injected values already provided for this effect')
   })
 
-  test('does not mock too many results of a same effect', () => {
+  test('does not inject too many values for a same effect', () => {
     const saga = function*() {
       const result = yield call(fn1)
       yield put({ type: 'SUCCESS', payload: result })
@@ -301,34 +309,34 @@ describe('mock()', () => {
 
     const runSaga = () =>
       use(saga)
-        .mock(call(fn1), 'result', 'unused result')
+        .inject(call(fn1), 'result', 'unused result')
         .run()
 
-    expect(runSaga).toThrow('Unused mock results')
+    expect(runSaga).toThrow('Unused injection values')
   })
 
-  test('does not mock without providing a result', () => {
+  test('does not inject without providing a value to use', () => {
     const saga = function*() {
       const result = yield call(fn1)
       yield put({ type: 'SUCCESS', payload: result })
     }
 
     const runSaga = () =>
-      (use(saga) as SagaRunner & { mock: (effect: Effect) => SagaRunner })
-        .mock(call(fn1))
+      (use(saga) as SagaRunner & { inject: (effect: Effect) => SagaRunner })
+        .inject(call(fn1))
         .run()
 
-    expect(runSaga).toThrow('Missing mock result argument')
+    expect(runSaga).toThrow('The value to inject is missing')
   })
 
-  test('does not mock without providing an effect', () => {
+  test('does not inject without providing an effect to match', () => {
     const saga = function*() {
       const result = call(fn1)
       yield put({ type: 'SUCCESS', payload: result })
     }
 
     const runSaga = () =>
-      (use(saga) as SagaRunner & { mock: () => SagaRunner }).mock().run()
+      (use(saga) as SagaRunner & { inject: () => SagaRunner }).inject().run()
 
     expect(runSaga).toThrow('Missing effect argument')
   })

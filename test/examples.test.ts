@@ -21,7 +21,7 @@ test('fetchUser() should dispatch FETCH_SUCCESS', () => {
   const mockUser = { user: 'name' }
 
   use(fetchUser, id)
-    .mock(call(service.getUser, id), mockUser)
+    .inject(call(service.getUser, id), mockUser)
     .should.yield(put({ type: 'FETCH_SUCCESS', payload: mockUser }))
     .run()
 })
@@ -31,7 +31,7 @@ test('fetchUser() should dispatch FETCH_FAILURE', () => {
   const mockError = new Error('Unable to fetch user')
 
   use(fetchUser, id)
-    .mock(call(service.getUser, id), throwError(mockError))
+    .inject(call(service.getUser, id), throwError(mockError))
     .should.yield(put({ type: 'FETCH_FAILURE', payload: mockError.message }))
     .run()
 })
@@ -49,7 +49,7 @@ function* watchNotify() {
 
 test('watchNotify() should dispatch NOTIFY_END', () => {
   use(watchNotify)
-    .mock(call(service.notify), finalize())
+    .inject(call(service.notify), finalize())
     .should.yield(put({ type: 'NOTIFY_END' }))
     .run()
 })
@@ -68,7 +68,7 @@ test('findUser() should throw an error', () => {
   const id = 789
 
   use(findUser, id)
-    .mock(call(service.getUser, id), undefined)
+    .inject(call(service.getUser, id), undefined)
     .should.throw(/^Unable to find user/)
     .run()
 })
