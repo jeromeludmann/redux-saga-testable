@@ -75,16 +75,22 @@ export type ErrorPattern =
 /**
  * Creates a saga runner.
  */
-export function use<Saga extends (...args: any[]) => any>(
+export function createRunner<Saga extends (...args: any[]) => any>(
   saga: Saga,
   ...args: Parameters<Saga>
 ): SagaRunner {
   if (!saga) {
-    throw failure('Missing saga argument', use)
+    throw failure('Missing saga argument', createRunner)
   }
 
-  return createRunner({ injections: [], assertions: [] }, saga, args)
+  return _createRunner({ injections: [], assertions: [] }, saga, args)
 }
+
+/**
+ * Creates a saga runner.
+ * @deprecated Use `createRunner()` instead.
+ */
+export const use = createRunner
 
 const THROW_ERROR = '@@redux-saga-testable/THROW_ERROR'
 
@@ -119,7 +125,7 @@ interface SagaRunnerState {
   errorPattern?: ErrorPattern
 }
 
-function createRunner(
+function _createRunner(
   state: SagaRunnerState,
   saga: Saga,
   args: Parameters<Saga>,
@@ -191,7 +197,7 @@ const _inject = (
     )
   }
 
-  return createRunner(
+  return _createRunner(
     {
       ...state,
       injections: [...state.injections, { effect, values }],
@@ -220,7 +226,7 @@ const _yield = (
     }
   }
 
-  return createRunner(
+  return _createRunner(
     {
       ...state,
       assertions: [...state.assertions, newAssertion],
@@ -249,7 +255,7 @@ const _return = (
     }
   }
 
-  return createRunner(
+  return _createRunner(
     {
       ...state,
       assertions: [...state.assertions, newAssertion],
@@ -308,7 +314,7 @@ const _throw = (
     newState.errorPattern = pattern
   }
 
-  return createRunner(newState, saga, args)
+  return _createRunner(newState, saga, args)
 }
 
 function createAssert(negated: boolean) {
