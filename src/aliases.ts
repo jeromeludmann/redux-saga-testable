@@ -484,12 +484,15 @@ export interface ExtendedSagaAssertions<R> {
   race<T>(effects: T[]): R
 }
 
-export const withExtendedSagaAssertions = <R>(runner: {
-  should: { yield: (effect: Effect) => R }
-}) => {
+export const withExtendedSagaAssertions = <R, S, N>(
+  runner: R,
+  newState: S,
+  isNegated: N,
+  _yield: (runner: R, state: S, isNegated: N) => (...args: any[]) => R,
+) => {
   const createAlias = (effectCreator: (...args: any[]) => Effect) => (
     ...args: any[]
-  ) => runner.should.yield(effectCreator(...args))
+  ) => _yield(runner, newState, isNegated)(effectCreator(...args))
 
   return {
     put: createAlias(put),
