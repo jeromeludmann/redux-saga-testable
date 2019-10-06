@@ -1,10 +1,8 @@
 import { isDeepStrictEqual } from 'util'
-import { Action } from 'redux'
-import { PuttableChannel, END, TakeableChannel } from 'redux-saga'
-import { put, call, take, ChannelPutEffect } from 'redux-saga/effects'
 import { IO } from '@redux-saga/symbols'
-import { Effect, Saga, ActionPattern, Pattern } from '@redux-saga/types'
+import { Effect, Saga } from '@redux-saga/types'
 import { stringify } from './stringify'
+import { ExtendedSagaAssertions, withExtendedSagaAssertions } from './aliases'
 
 export interface SagaRunner {
   /**
@@ -15,7 +13,7 @@ export interface SagaRunner {
   /**
    * Provides the assertion methods.
    */
-  should: Should
+  should: SagaAssertions
 
   /**
    * Catches silently an error thrown by the saga (alias of `should.throw()`).
@@ -28,7 +26,7 @@ export interface SagaRunner {
   run(): SagaOutput
 }
 
-export interface Should {
+export interface SagaAssertions extends ExtendedSagaAssertions<SagaRunner> {
   /**
    * Asserts that the saga yields an effect.
    */
@@ -47,66 +45,7 @@ export interface Should {
   /**
    * Negates the next assertion.
    */
-  not: Pick<Should, Exclude<keyof Should, 'not'>>
-
-  /**
-   * Asserts that the saga emits a PUT effect.
-   *
-   * Shortcut for `should.yield(put(...))`
-   */
-  put<A extends Action>(action: A): SagaRunner
-
-  put<T>(channel: PuttableChannel<T>, action: T | END): ChannelPutEffect<T>
-
-  /**
-   * Asserts that the saga emits a CALL effect.
-   *
-   * Shortcut for `should.yield(call(...))`
-   */
-  call<Fn extends (...args: any[]) => any>(
-    fn: Fn,
-    ...args: Parameters<Fn>
-  ): SagaRunner
-
-  call<
-    Ctx extends { [P in Name]: (this: Ctx, ...args: any[]) => any },
-    Name extends string
-  >(
-    ctxAndFnName: [Ctx, Name],
-    ...args: Parameters<Ctx[Name]>
-  ): SagaRunner
-
-  call<
-    Ctx extends { [P in Name]: (this: Ctx, ...args: any[]) => any },
-    Name extends string
-  >(
-    ctxAndFnName: { context: Ctx; fn: Name },
-    ...args: Parameters<Ctx[Name]>
-  ): SagaRunner
-
-  call<Ctx, Fn extends (this: Ctx, ...args: any[]) => any>(
-    ctxAndFn: [Ctx, Fn],
-    ...args: Parameters<Fn>
-  ): SagaRunner
-
-  call<Ctx, Fn extends (this: Ctx, ...args: any[]) => any>(
-    ctxAndFn: { context: Ctx; fn: Fn },
-    ...args: Parameters<Fn>
-  ): SagaRunner
-
-  /**
-   * Asserts that the saga emits a TAKE effect.
-   *
-   * Shortcut for `should.yield(take(...))`
-   */
-  take(pattern?: ActionPattern): SagaRunner
-
-  take<A extends Action>(pattern?: ActionPattern<A>): SagaRunner
-
-  take<T>(
-    channel: TakeableChannel<T>,
-    multicastPattern?: Pattern<T>,
-  ): SagaRunner
+  not: Pick<SagaAssertions, Exclude<keyof SagaAssertions, 'not'>>
 }
 
 /**
@@ -170,7 +109,7 @@ export function finalize(): Finalize {
 
 interface SagaRunnerState {
   mocks: Mock[]
-  assertions: Assertion[]
+  assertions: Array<(output: SagaOutput) => void>
   errorPattern?: ErrorPattern
 }
 
@@ -184,8 +123,6 @@ function createRunner(
   runner.mock = _mock(state, saga, args)
   runner.run = _run(state, saga, args)
 
-  // assertions
-
   let negated = false
   const isNegated = () => negated
 
@@ -193,9 +130,11 @@ function createRunner(
     yield: _yield(state, isNegated, saga, args),
     return: _return(state, isNegated, saga, args),
     throw: _throw(state, isNegated, saga, args),
+    ...withExtendedSagaAssertions(runner),
   }
 
   runner.should.not = runner.should
+
   runner.should = new Proxy(runner.should, {
     get(target: any, key) {
       negated = key === 'not'
@@ -204,18 +143,7 @@ function createRunner(
   })
 
   // aliases
-
   runner.catch = runner.should.throw
-
-  // effect assertion shortcuts
-
-  const makeEffectShortcut = (effectCreator: (...args: any[]) => Effect) => (
-    ...args: any[]
-  ) => runner.should.yield(effectCreator(...args))
-
-  runner.should.put = makeEffectShortcut(put)
-  runner.should.call = makeEffectShortcut(call)
-  runner.should.take = makeEffectShortcut(take)
 
   return runner
 }
@@ -264,8 +192,6 @@ const _mock = (state: SagaRunnerState, saga: Saga, args: Parameters<Saga>) => (
   )
 }
 
-type Assertion = (output: SagaOutput) => void
-
 const _yield = (
   state: SagaRunnerState,
   isNegated: () => boolean,
@@ -274,7 +200,7 @@ const _yield = (
 ) => (effect: Effect) => {
   const assert = createAssert(isNegated())
 
-  const newAssertion: Assertion = output => {
+  const newAssertion = (output: SagaOutput) => {
     if (!assert(output.effects.some(e => isDeepStrictEqual(e, effect)))) {
       throw failure(
         'Assertion failure\n\n' +
@@ -303,7 +229,7 @@ const _return = (
 ) => (value: any) => {
   const assert = createAssert(isNegated())
 
-  const newAssertion: Assertion = output => {
+  const newAssertion = (output: SagaOutput) => {
     if (!assert(isDeepStrictEqual(output.return, value))) {
       throw failure(
         'Assertion failure\n\n' +
@@ -337,7 +263,7 @@ const _throw = (
   const negated = isNegated()
   const assert = createAssert(negated)
 
-  const newAssertion: Assertion = output => {
+  const newAssertion = (output: SagaOutput) => {
     if (!output.error) {
       throw failure(
         'No error thrown by the saga\n\n' +
@@ -455,7 +381,10 @@ function checkMocks(mocks: Mock[], ssf: Function) {
   }
 }
 
-function checkAssertions(assertions: Assertion[], output: SagaOutput) {
+function checkAssertions(
+  assertions: Array<(output: SagaOutput) => void>,
+  output: SagaOutput,
+) {
   assertions.forEach(assertion => assertion(output))
 }
 

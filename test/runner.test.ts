@@ -1,4 +1,4 @@
-import { put, call, take, Effect } from 'redux-saga/effects'
+import { Effect, put, call } from 'redux-saga/effects'
 import { use, throwError, finalize, SagaRunner } from '../src/runner'
 
 const fn1 = () => {}
@@ -577,41 +577,5 @@ describe('should.throw()', () => {
         .run()
 
     expect(runSaga).toThrow('Assertion failure')
-  })
-})
-
-describe('should.put()', () => {
-  const saga = function*() {
-    yield put({ type: 'SUCCESS' })
-  }
-
-  test('asserts that the saga emits PUT effect', () => {
-    use(saga)
-      .should.put({ type: 'SUCCESS' })
-      .run()
-  })
-})
-
-describe('should.call()', () => {
-  const saga = function*() {
-    yield call(fn1)
-  }
-
-  test('asserts that the saga emits CALL effect', () => {
-    use(saga)
-      .should.call(fn1)
-      .run()
-  })
-})
-
-describe('should.take()', () => {
-  const saga = function*() {
-    yield take('FETCH')
-  }
-
-  test('asserts that the saga emits TAKE effect', () => {
-    use(saga)
-      .should.take('FETCH')
-      .run()
   })
 })
