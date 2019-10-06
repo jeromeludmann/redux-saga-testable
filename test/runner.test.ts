@@ -1,5 +1,11 @@
 import { Effect, put, call } from 'redux-saga/effects'
-import { use, throwError, finalize, SagaRunner } from '../src/runner'
+import {
+  createRunner,
+  throwError,
+  finalize,
+  SagaRunner,
+  use,
+} from '../src/runner'
 
 const fn1 = () => {}
 const fn2 = () => {}
@@ -7,15 +13,15 @@ const fn3 = () => {}
 
 const sagaError = new Error('Saga fails')
 
-describe('use()', () => {
+describe('createRunner()', () => {
   test('creates a runner with a saga and its arguments', () => {
     const saga = function*() {
       yield put({ type: 'SUCCESS' })
     }
 
-    const runner = use(saga)
+    const runner = createRunner(saga)
 
-    expect(runner).toHaveProperty('mock')
+    expect(runner).toHaveProperty('inject')
     expect(runner).toHaveProperty('should.yield')
     expect(runner).toHaveProperty('should.return')
     expect(runner).toHaveProperty('should.throw')
@@ -24,11 +30,15 @@ describe('use()', () => {
     expect(runner).toHaveProperty('should.take')
     expect(runner).toHaveProperty('catch')
     expect(runner).toHaveProperty('run')
+
+    // prevents breaking changes
+
+    const runner2 = use(saga)
+
+    expect(runner2).toHaveProperty('mock')
   })
 
   test('does not create a runner without providing a saga', () => {
-    const createRunner = () => (use as { (): SagaRunner })()
-
     expect(createRunner).toThrow('Missing saga argument')
   })
 })
@@ -40,7 +50,7 @@ describe('run()', () => {
       yield put({ type: 'SUCCESS' })
     }
 
-    const output = use(saga).run()
+    const output = createRunner(saga).run()
 
     expect(output.effects).toEqual([call(fn1), put({ type: 'SUCCESS' })])
   })
@@ -51,7 +61,7 @@ describe('run()', () => {
       return 'return value'
     }
 
-    const output = use(saga).run()
+    const output = createRunner(saga).run()
 
     expect(output.return).toEqual('return value')
   })
@@ -62,7 +72,7 @@ describe('run()', () => {
       yield put({ type: 'SUCCESS', payload: result })
     }
 
-    const output = use(saga).run()
+    const output = createRunner(saga).run()
 
     expect(output.effects).toEqual([
       put({ type: 'SUCCESS', payload: { message: 'not an effect' } }),
@@ -77,11 +87,9 @@ describe('run()', () => {
       yield put({ type: 'SUCCESS', payload: [result1, result2] })
     }
 
-    let runner = use(saga)
-    runner = runner.mock(call(fn1), 'result1')
+    const runner = createRunner(saga).inject(call(fn1), 'result1')
     const output1 = runner.run()
-    runner = runner.mock(call(fn2), 'result2')
-    const output2 = runner.run()
+    const output2 = runner.inject(call(fn2), 'result2').run()
 
     expect(output1.effects).toContainEqual(
       put({ type: 'SUCCESS', payload: ['result1', undefined] }),
@@ -99,13 +107,13 @@ describe('run()', () => {
       yield put({ type: 'SUCCESS', payload: [result1, result2, result3] })
     }
 
-    const runner = use(saga)
-    const runner1 = runner.mock(call(fn1), 'result1')
-    const runner2 = runner.mock(call(fn2), 'result2')
+    const runner = createRunner(saga)
+    const runner1 = runner.inject(call(fn1), 'result1')
+    const runner2 = runner.inject(call(fn2), 'result2')
 
     const output1 = runner1.run()
     const output2 = runner2.run()
-    const output3 = runner2.mock(call(fn3), 'result3').run()
+    const output3 = runner2.inject(call(fn3), 'result3').run()
 
     expect(output1.effects).toContainEqual(
       put({ type: 'SUCCESS', payload: ['result1', undefined, undefined] }),
@@ -124,7 +132,7 @@ describe('run()', () => {
       throw sagaError
     }
 
-    const runSaga = () => use(saga).run()
+    const runSaga = () => createRunner(saga).run()
 
     expect(runSaga).toThrow(sagaError.message)
   })
@@ -135,7 +143,7 @@ describe('run()', () => {
       throw { message: sagaError.message }
     }
 
-    const runSaga = () => use(saga).run()
+    const runSaga = () => createRunner(saga).run()
 
     expect(runSaga).toThrow(sagaError.message)
   })
@@ -146,7 +154,7 @@ describe('run()', () => {
       throw sagaError.message
     }
 
-    const runSaga = () => use(saga).run()
+    const runSaga = () => createRunner(saga).run()
 
     expect(runSaga).toThrow(sagaError.message)
   })
@@ -156,29 +164,39 @@ describe('run()', () => {
       for (;;) yield put({ type: 'SUCCESS' })
     }
 
-    const runSaga = () => use(saga).run()
+    const runSaga = () => createRunner(saga).run()
 
     expect(runSaga).toThrow('Maximum yielded effects size reached')
   })
 })
 
-describe('mock()', () => {
-  test('mocks the result of an effect', () => {
+describe('inject()', () => {
+  test('injects a value', () => {
     const saga = function*() {
       const result = yield call(fn1)
       yield put({ type: 'SUCCESS', payload: result })
     }
 
-    const output = use(saga)
-      .mock(call(fn1), 'result')
+    const output = createRunner(saga)
+      .inject(call(fn1), 'result')
       .run()
 
     expect(output.effects).toContainEqual(
       put({ type: 'SUCCESS', payload: 'result' }),
     )
+
+    // prevents breaking changes
+
+    const output2 = createRunner(saga)
+      .mock(call(fn1), 'result')
+      .run()
+
+    expect(output2.effects).toContainEqual(
+      put({ type: 'SUCCESS', payload: 'result' }),
+    )
   })
 
-  test('mocks the result of an effect with throwError()', () => {
+  test('injects a thrown error', () => {
     const saga = function*() {
       try {
         const result = yield call(fn1)
@@ -188,8 +206,8 @@ describe('mock()', () => {
       }
     }
 
-    const output = use(saga)
-      .mock(call(fn1), throwError(sagaError))
+    const output = createRunner(saga)
+      .inject(call(fn1), throwError(sagaError))
       .run()
 
     expect(output.effects).toContainEqual(
@@ -197,7 +215,7 @@ describe('mock()', () => {
     )
   })
 
-  test('mocks the result of an effect with finalize()', () => {
+  test('injects a finalize signal', () => {
     const saga = function*() {
       try {
         yield call(fn1)
@@ -207,14 +225,14 @@ describe('mock()', () => {
       }
     }
 
-    const output = use(saga)
-      .mock(call(fn1), finalize())
+    const output = createRunner(saga)
+      .inject(call(fn1), finalize())
       .run()
 
     expect(output.effects).toEqual([call(fn1), put({ type: 'END' })])
   })
 
-  test('mocks the results of a same effect', () => {
+  test('injects values for a same effect', () => {
     const saga = function*() {
       const result1 = yield call(fn1)
       const result2 = yield call(fn1)
@@ -222,8 +240,8 @@ describe('mock()', () => {
       yield put({ type: 'SUCCESS', payload: [result1, result2, result3] })
     }
 
-    const output = use(saga)
-      .mock(call(fn1), 'result1', 'result2', 'result3')
+    const output = createRunner(saga)
+      .inject(call(fn1), 'result1', 'result2', 'result3')
       .run()
 
     expect(output.effects).toContainEqual(
@@ -231,7 +249,7 @@ describe('mock()', () => {
     )
   })
 
-  test('mocks the results of several effects', () => {
+  test('injects values for different effects', () => {
     const saga = function*() {
       const result1 = yield call(fn1)
       const result2 = yield call(fn2)
@@ -239,10 +257,10 @@ describe('mock()', () => {
       yield put({ type: 'SUCCESS', payload: [result1, result2, result3] })
     }
 
-    const output = use(saga)
-      .mock(call(fn1), 'result1')
-      .mock(call(fn2), 'result2')
-      .mock(call(fn3), 'result3')
+    const output = createRunner(saga)
+      .inject(call(fn1), 'result1')
+      .inject(call(fn2), 'result2')
+      .inject(call(fn3), 'result3')
       .run()
 
     expect(output.effects).toContainEqual(
@@ -250,14 +268,14 @@ describe('mock()', () => {
     )
   })
 
-  test('mocks with a "null" value', () => {
+  test('injects a "null" value', () => {
     const saga = function*() {
       const result1 = yield call(fn1)
       yield put({ type: 'SUCCESS', payload: result1 })
     }
 
-    const output = use(saga)
-      .mock(call(fn1), null)
+    const output = createRunner(saga)
+      .inject(call(fn1), null)
       .run()
 
     expect(output.effects).toContainEqual(
@@ -265,70 +283,74 @@ describe('mock()', () => {
     )
   })
 
-  test('does not mock the result of an effect that is not yielded', () => {
+  test('does not inject a value for an effect that is not yielded', () => {
     const saga = function*() {
       yield put({ type: 'SUCCESS' })
     }
 
     const runSaga = () =>
-      use(saga)
-        .mock(call(fn1), 'result')
+      createRunner(saga)
+        .inject(call(fn1), 'result')
         .run()
 
-    expect(runSaga).toThrow('Unused mock results')
+    expect(runSaga).toThrow('Unused injection values')
   })
 
-  test('does not mock the result several times of a same effect', () => {
+  test('does not inject values several times for a same effect', () => {
     const saga = function*() {
       const result = call(fn1)
       yield put({ type: 'SUCCESS', payload: result })
     }
 
     const runSaga = () =>
-      use(saga)
-        .mock(call(fn1), 'result1')
-        .mock(call(fn1), 'result2')
+      createRunner(saga)
+        .inject(call(fn1), 'result1')
+        .inject(call(fn1), 'result2')
         .run()
 
-    expect(runSaga).toThrow('Mock results already provided')
+    expect(runSaga).toThrow('Injected values already provided for this effect')
   })
 
-  test('does not mock too many results of a same effect', () => {
+  test('does not inject too many values for a same effect', () => {
     const saga = function*() {
       const result = yield call(fn1)
       yield put({ type: 'SUCCESS', payload: result })
     }
 
     const runSaga = () =>
-      use(saga)
-        .mock(call(fn1), 'result', 'unused result')
+      createRunner(saga)
+        .inject(call(fn1), 'result', 'unused result')
         .run()
 
-    expect(runSaga).toThrow('Unused mock results')
+    expect(runSaga).toThrow('Unused injection values')
   })
 
-  test('does not mock without providing a result', () => {
+  test('does not inject without providing a value to use', () => {
     const saga = function*() {
       const result = yield call(fn1)
       yield put({ type: 'SUCCESS', payload: result })
     }
 
     const runSaga = () =>
-      (use(saga) as SagaRunner & { mock: (effect: Effect) => SagaRunner })
-        .mock(call(fn1))
+      (createRunner(saga) as SagaRunner & {
+        inject: (effect: Effect) => SagaRunner
+      })
+        .inject(call(fn1))
         .run()
 
-    expect(runSaga).toThrow('Missing mock result argument')
+    expect(runSaga).toThrow('The value to inject is missing')
   })
 
-  test('does not mock without providing an effect', () => {
+  test('does not inject without providing an effect to match', () => {
     const saga = function*() {
       const result = call(fn1)
       yield put({ type: 'SUCCESS', payload: result })
     }
 
     const runSaga = () =>
-      (use(saga) as SagaRunner & { mock: () => SagaRunner }).mock().run()
+      (createRunner(saga) as SagaRunner & { inject: () => SagaRunner })
+        .inject()
+        .run()
 
     expect(runSaga).toThrow('Missing effect argument')
   })
@@ -341,7 +363,7 @@ describe('catch()', () => {
       throw sagaError
     }
 
-    const output = use(saga)
+    const output = createRunner(saga)
       .catch('fails')
       .run()
 
@@ -354,7 +376,7 @@ describe('catch()', () => {
       throw sagaError
     }
 
-    const output = use(saga)
+    const output = createRunner(saga)
       .catch(/^Saga fails$/)
       .run()
 
@@ -367,7 +389,7 @@ describe('catch()', () => {
       throw sagaError
     }
 
-    const output = use(saga)
+    const output = createRunner(saga)
       .catch(sagaError)
       .run()
 
@@ -380,7 +402,7 @@ describe('catch()', () => {
       throw new TypeError(sagaError.message)
     }
 
-    const output = use(saga)
+    const output = createRunner(saga)
       .catch(TypeError)
       .run()
 
@@ -393,7 +415,7 @@ describe('catch()', () => {
       throw new TypeError(sagaError.message)
     }
 
-    const output = use(saga)
+    const output = createRunner(saga)
       .catch(Error)
       .run()
 
@@ -406,7 +428,7 @@ describe('catch()', () => {
       throw { message: sagaError.message }
     }
 
-    const output = use(saga)
+    const output = createRunner(saga)
       .catch(sagaError.message)
       .run()
 
@@ -421,7 +443,7 @@ describe('catch()', () => {
       throw sagaError.message
     }
 
-    const output = use(saga)
+    const output = createRunner(saga)
       .catch(sagaError.message)
       .run()
 
@@ -435,7 +457,7 @@ describe('catch()', () => {
     }
 
     const runSaga = () =>
-      use(saga)
+      createRunner(saga)
         .catch('unthrown error message')
         .run()
 
@@ -448,7 +470,7 @@ describe('catch()', () => {
     }
 
     const runSaga = () =>
-      use(saga)
+      createRunner(saga)
         .catch(Error)
         .run()
 
@@ -462,7 +484,7 @@ describe('catch()', () => {
     }
 
     const runSaga = () =>
-      use(saga)
+      createRunner(saga)
         .catch('value of an uncatchable object')
         .run()
 
@@ -476,7 +498,7 @@ describe('catch()', () => {
     }
 
     const runSaga = () =>
-      use(saga)
+      createRunner(saga)
         .catch(/^Saga/)
         .catch(/fails$/)
         .run()
@@ -491,7 +513,9 @@ describe('catch()', () => {
     }
 
     const runSaga = () =>
-      (use(saga) as SagaRunner & { catch: () => SagaRunner }).catch().run()
+      (createRunner(saga) as SagaRunner & { catch: () => SagaRunner })
+        .catch()
+        .run()
 
     expect(runSaga).toThrow('Missing error pattern argument')
   })
@@ -503,20 +527,20 @@ describe('should.yield()', () => {
   }
 
   test('asserts that the saga yields an effect', () => {
-    use(saga)
+    createRunner(saga)
       .should.yield(put({ type: 'SUCCESS', payload: 'result' }))
       .run()
   })
 
   test('asserts that the saga does not yield an effect', () => {
-    use(saga)
+    createRunner(saga)
       .should.not.yield(call(fn1))
       .run()
   })
 
   test('does not assert that the saga yields an effect', () => {
     const runSaga = () =>
-      use(saga)
+      createRunner(saga)
         .should.yield(call(fn1))
         .run()
 
@@ -530,20 +554,20 @@ describe('should.return()', () => {
   }
 
   test('asserts that the saga returns a value', () => {
-    use(saga)
+    createRunner(saga)
       .should.return('result1')
       .run()
   })
 
   test('asserts that the saga does not return a value', () => {
-    use(saga)
+    createRunner(saga)
       .should.not.return('result2')
       .run()
   })
 
   test('does not assert that the saga returns a value', () => {
     const runSaga = () =>
-      use(saga)
+      createRunner(saga)
         .should.return('result2')
         .run()
 
@@ -558,13 +582,13 @@ describe('should.throw()', () => {
   }
 
   test('asserts that the saga throwns an error', () => {
-    use(saga)
+    createRunner(saga)
       .should.throw(sagaError.message)
       .run()
   })
 
   test('asserts that the saga does not throw an error', () => {
-    use(saga)
+    createRunner(saga)
       .should.not.throw('unthrown')
       .catch(sagaError.message)
       .run()
@@ -572,7 +596,7 @@ describe('should.throw()', () => {
 
   test('does not assert that the saga throwns an error', () => {
     const runSaga = () =>
-      use(saga)
+      createRunner(saga)
         .should.throw('unthrown')
         .run()
 

@@ -6,7 +6,13 @@ import { ExtendedSagaAssertions, withExtendedSagaAssertions } from './aliases'
 
 export interface SagaRunner {
   /**
+   * Injects a value into the saga when an effect is yielded.
+   */
+  inject(effect: Effect, value: any, ...nextValues: any[]): SagaRunner
+
+  /**
    * Mocks the result of an effect.
+   * @deprecated Use `inject()` instead.
    */
   mock(effect: Effect, result: any, ...nextResults: any[]): SagaRunner
 
@@ -69,16 +75,22 @@ export type ErrorPattern =
 /**
  * Creates a saga runner.
  */
-export function use<Saga extends (...args: any[]) => any>(
+export function createRunner<Saga extends (...args: any[]) => any>(
   saga: Saga,
   ...args: Parameters<Saga>
 ): SagaRunner {
   if (!saga) {
-    throw failure('Missing saga argument', use)
+    throw failure('Missing saga argument', createRunner)
   }
 
-  return createRunner({ mocks: [], assertions: [] }, saga, args)
+  return _createRunner({ injections: [], assertions: [] }, saga, args)
 }
+
+/**
+ * Creates a saga runner.
+ * @deprecated Use `createRunner()` instead.
+ */
+export const use = createRunner
 
 const THROW_ERROR = '@@redux-saga-testable/THROW_ERROR'
 
@@ -88,7 +100,7 @@ export interface ThrowError {
 }
 
 /**
- * Throws an error when used as a mock result.
+ * Throws an error from the saga when injected as a value.
  */
 export function throwError(error: Error): ThrowError {
   return { [THROW_ERROR]: true, error }
@@ -101,26 +113,26 @@ export interface Finalize {
 }
 
 /**
- * Finalizes the saga when used as a mock result.
+ * Finalizes the saga when injected as a value.
  */
 export function finalize(): Finalize {
   return { [FINALIZE]: true }
 }
 
 interface SagaRunnerState {
-  mocks: Mock[]
+  injections: Injection[]
   assertions: Array<(output: SagaOutput) => void>
   errorPattern?: ErrorPattern
 }
 
-function createRunner(
+function _createRunner(
   state: SagaRunnerState,
   saga: Saga,
   args: Parameters<Saga>,
 ): SagaRunner {
   const runner: any = {}
 
-  runner.mock = _mock(state, saga, args)
+  runner.inject = _inject(state, saga, args)
   runner.run = _run(state, saga, args)
 
   let negated = false
@@ -144,48 +156,51 @@ function createRunner(
 
   // aliases
   runner.catch = runner.should.throw
+  runner.mock = runner.inject // could be removed later
 
   return runner
 }
 
-interface Mock {
+interface Injection {
   effect: Effect
-  results: any[]
+  values: any[]
 }
 
-const _mock = (state: SagaRunnerState, saga: Saga, args: Parameters<Saga>) => (
-  effect: Effect,
-  ...results: any[]
-) => {
+const _inject = (
+  state: SagaRunnerState,
+  saga: Saga,
+  args: Parameters<Saga>,
+) => (effect: Effect, ...values: any[]) => {
   if (!effect) {
-    throw failure('Missing effect argument', _mock)
+    throw failure('Missing effect argument', _inject)
   }
 
-  if (results.length === 0) {
+  if (values.length === 0) {
     throw failure(
-      'Missing mock result argument\n\n' +
-        `Given effect:\n\n${stringify(effect)}`,
-      _mock,
+      `The value to inject is missing\n\nGiven effect:\n\n${stringify(effect)}`,
+      _inject,
     )
   }
 
-  const mockAlreadyProvided = state.mocks.find(mock =>
-    isDeepStrictEqual(mock.effect, effect),
+  const effectHasAlreadyInjectedValues = state.injections.find(injection =>
+    isDeepStrictEqual(injection.effect, effect),
   )
 
-  if (mockAlreadyProvided) {
+  if (effectHasAlreadyInjectedValues) {
     throw failure(
-      'Mock results already provided\n\n' +
+      'Injected values already provided for this effect\n\n' +
         `Given effect:\n\n${stringify(effect)}\n\n` +
-        `Existing mock results:\n\n${stringify(mockAlreadyProvided.results)}`,
-      _mock,
+        `Existing injected values:\n\n${stringify(
+          effectHasAlreadyInjectedValues.values,
+        )}`,
+      _inject,
     )
   }
 
-  return createRunner(
+  return _createRunner(
     {
       ...state,
-      mocks: [...state.mocks, { effect, results }],
+      injections: [...state.injections, { effect, values }],
     },
     saga,
     args,
@@ -211,7 +226,7 @@ const _yield = (
     }
   }
 
-  return createRunner(
+  return _createRunner(
     {
       ...state,
       assertions: [...state.assertions, newAssertion],
@@ -240,7 +255,7 @@ const _return = (
     }
   }
 
-  return createRunner(
+  return _createRunner(
     {
       ...state,
       assertions: [...state.assertions, newAssertion],
@@ -299,7 +314,7 @@ const _throw = (
     newState.errorPattern = pattern
   }
 
-  return createRunner(newState, saga, args)
+  return _createRunner(newState, saga, args)
 }
 
 function createAssert(negated: boolean) {
@@ -309,30 +324,31 @@ function createAssert(negated: boolean) {
 const _run = (state: SagaRunnerState, saga: Saga, args: any[]) => () => {
   const output: SagaOutput = { effects: [] }
   const iterator = saga(...args)
-  let result, nextValue
+  let sagaStep: IteratorResult<any>
+  let nextValue = undefined
 
   // prevents run() from mutating state
-  const mocks = state.mocks.map(mock => ({
-    ...mock,
-    results: Array.from(mock.results),
+  const injections = state.injections.map(injection => ({
+    ...injection,
+    values: Array.from(injection.values),
   }))
 
   for (;;) {
     try {
-      result = next(iterator, nextValue)
+      sagaStep = next(iterator, nextValue)
     } catch (error) {
       if (!state.errorPattern) throw error
       output.error = error
       break
     }
 
-    if (result.done) {
-      output.return = result.value
+    if (sagaStep.done) {
+      output.return = sagaStep.value
       break
     }
 
-    if (!isEffect(result.value)) {
-      nextValue = result.value
+    if (!isEffect(sagaStep.value)) {
+      nextValue = sagaStep.value
       continue
     }
 
@@ -340,17 +356,21 @@ const _run = (state: SagaRunnerState, saga: Saga, args: any[]) => () => {
       throw failure('Maximum yielded effects size reached', _run)
     }
 
-    output.effects.push(result.value)
-    nextValue = extractMockResult(mocks, result.value)
+    output.effects.push(sagaStep.value)
+
+    const injection = injections.find(injection =>
+      isDeepStrictEqual(injection.effect, sagaStep.value),
+    )
+    nextValue = injection ? injection.values.shift() : undefined
   }
 
-  checkMocks(mocks, _run)
+  checkInjections(injections, _run)
   checkAssertions(state.assertions, output)
 
   return output
 }
 
-function next(iterator: IterableIterator<any>, value: any) {
+function next(iterator: Iterator<any>, value: any) {
   if (value !== null && typeof value === 'object') {
     if (THROW_ERROR in value) return iterator.throw!(value.error)
     if (FINALIZE in value) return iterator.return!()
@@ -363,19 +383,16 @@ function isEffect(obj: Object) {
   return obj !== null && typeof obj === 'object' && IO in obj
 }
 
-function extractMockResult(mocks: Mock[], effect: Effect) {
-  const mock = mocks.find(mock => isDeepStrictEqual(mock.effect, effect))
-  return mock ? mock.results.shift() : undefined
-}
+function checkInjections(injections: Injection[], ssf: Function) {
+  const unusedInjection = injections.find(
+    injection => injection.values.length > 0,
+  )
 
-function checkMocks(mocks: Mock[], ssf: Function) {
-  const unusedMock = mocks.find(mock => mock.results.length > 0)
-
-  if (unusedMock) {
+  if (unusedInjection) {
     throw failure(
-      'Unused mock results\n\n' +
-        `Given effect:\n\n${stringify(unusedMock.effect)}\n\n` +
-        `Unused mock results:\n\n${stringify(unusedMock.results)}`,
+      'Unused injection values\n\n' +
+        `Given effect:\n\n${stringify(unusedInjection.effect)}\n\n` +
+        `Unused injection values:\n\n${stringify(unusedInjection.values)}`,
       ssf,
     )
   }
