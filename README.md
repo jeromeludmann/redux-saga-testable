@@ -20,6 +20,7 @@ When testing a saga, we should not have to worry about what the generator functi
   - [Test an error case](#test-an-error-case)
   - [Finalize a saga prematurely](#finalize-a-saga-prematurely)
   - [Catch an error thrown by a saga](#catch-an-error-thrown-by-a-saga)
+  - [Clone a saga runner instance](#clone-a-saga-runner-instance)
 - [API](#api)
 - [License](#license)
 
@@ -168,6 +169,73 @@ The runner will catch the error thrown by the saga and will record it under the 
 
 [Get the above examples](/test/examples.test.ts).
 
+### Clone a saga runner instance
+
+In order to have more concise tests, this feature allows to manage multiple runner instances (almost same purpose of [`cloneableGenerator`](https://github.com/redux-saga/redux-saga/tree/master/docs/api#cloneablegeneratorgeneratorfunc)).
+
+When `runner.clone()` is invoked, a new [`SagaRunner`](#sagarunner) is created from the previous state. It is no longer required to repeat data injections or effect assertions.
+
+```ts
+test('clones instances of a saga runner several times', () => {
+  const saga = function*() {
+    const result1 = yield call(fn1)
+    const result2 = yield call(fn2)
+    const result3 = yield call(fn3)
+
+    if (result1) {
+      yield fork(fn1)
+    }
+
+    if (result2) {
+      yield fork(fn2)
+    }
+
+    if (result3) {
+      yield fork(fn3)
+    }
+
+    yield put({ type: 'SUCCESS', payload: [result1, result2, result3] })
+  }
+
+  const runner = createRunner(saga)
+
+  const runner1 = runner.clone()
+  const runner2 = runner.clone()
+
+  runner1.inject(call(fn1), 'result1')
+  runner1.should.yield(fork(fn1))
+  runner1.should.not.yield(fork(fn2))
+  runner1.should.not.yield(fork(fn3))
+
+  runner2.inject(call(fn2), 'result2')
+
+  const runner3 = runner2.clone()
+
+  runner2.should.not.yield(fork(fn1))
+  runner2.should.yield(fork(fn2))
+  runner2.should.not.yield(fork(fn3))
+
+  runner3.inject(call(fn3), 'result3')
+  runner3.should.not.yield(fork(fn1))
+  runner3.should.yield(fork(fn2))
+  runner3.should.yield(fork(fn3))
+
+  const output1 = runner1.run()
+  const output2 = runner2.run()
+  const output3 = runner3.run()
+
+  expect(output1.effects).toContainEqual(
+    put({ type: 'SUCCESS', payload: ['result1', undefined, undefined] }),
+  )
+  expect(output2.effects).toContainEqual(
+    put({ type: 'SUCCESS', payload: [undefined, 'result2', undefined] }),
+  )
+  expect(output3.effects).toContainEqual(
+    put({ type: 'SUCCESS', payload: [undefined, 'result2', 'result3'] }),
+  )
+})
+```
+
 ## API
 
 ### `createRunner(saga[, ...args])`
@@ -260,7 +328,7 @@ createRunner(fetchUser, 'unknown_id')
 
 ### `runner.catch(error)`
 
-Catches an error thrown by the saga (alias of [`runner.should.throw()`](#runnershouldthrowerror)).
+Catches silently an error thrown by the saga (alias of [`runner.should.throw()`](#runnershouldthrowerror)).
 
 - `error: ErrorPattern` - a pattern that matches the thrown error
 
@@ -276,6 +344,33 @@ Returns the current [`SagaRunner`](#sagarunner).
 ```ts
 createRunner(fetchUser, 'unknown_id')
   .catch(/User not found/)
+  .run()
+```
+
+### `runner.clone()`
+
+Clones the current runner instance.
+
+Returns a copy of the current [`SagaRunner`](#sagarunner).
+
+```ts
+const rootRunner = createRunner(fetchUser, 'user_id')
+const clonedRunner = rootRunner.clone()
+
+clonedRunner.inject(call(getUser), { name: 'mock name' })
+
+rootRunner.should
+  .put({
+    type: 'FETCH_SUCCESS',
+    payload: { user: undefined },
+  })
+  .run()
+
+clonedRunner.should
+  .put({
+    type: 'FETCH_SUCCESS',
+    payload: { user: { name: 'mock name' } },
+  })
   .run()
 ```
 
