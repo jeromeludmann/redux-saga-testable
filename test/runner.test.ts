@@ -25,8 +25,8 @@ describe('createRunner()', () => {
     expect(runner).toHaveProperty('run')
 
     // prevents breaking changes
-    const runner2 = use(saga)
-    expect(runner2).toHaveProperty('mock')
+    expect(use).toStrictEqual(createRunner)
+    expect(runner.mock).toStrictEqual(runner.inject)
   })
 
   test('does not create a runner without providing a saga', () => {
@@ -146,16 +146,6 @@ describe('inject()', () => {
       .run()
 
     expect(output.effects).toContainEqual(
-      put({ type: 'SUCCESS', payload: 'result' }),
-    )
-
-    // prevents breaking changes
-
-    const output2 = createRunner(saga)
-      .mock(call(fn1), 'result')
-      .run()
-
-    expect(output2.effects).toContainEqual(
       put({ type: 'SUCCESS', payload: 'result' }),
     )
   })
