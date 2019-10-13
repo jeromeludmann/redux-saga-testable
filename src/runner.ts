@@ -117,6 +117,13 @@ export const _yield = (
   isNegated: () => boolean,
   stackFunction?: Function,
 ) => (effect: Effect): SagaRunner => {
+  if (!effect) {
+    throw createError(
+      'Missing effect argument',
+      stackFunction || runner.should.yield,
+    )
+  }
+
   const output = _run(runner, state, saga, args, stackFunction)()
 
   const assert = createAssert(
@@ -144,6 +151,13 @@ export const _return = (
   isNegated: () => boolean,
   stackFunction?: Function,
 ) => (value: any): SagaRunner => {
+  if (!value) {
+    throw createError(
+      'Missing return value argument',
+      stackFunction || runner.should.return,
+    )
+  }
+
   const output = _run(runner, state, saga, args, stackFunction)()
 
   const assert = createAssert(
@@ -171,6 +185,13 @@ export const _throw = (
   isNegated: () => boolean,
   stackFunction?: Function,
 ) => (pattern: ErrorPattern): SagaRunner => {
+  if (!pattern) {
+    throw createError(
+      'Missing error pattern argument',
+      stackFunction || runner.should.throw,
+    )
+  }
+
   const output = _run(runner, state, saga, args, stackFunction)()
 
   const assert = createAssert(
