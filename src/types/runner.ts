@@ -53,7 +53,7 @@ export interface SagaAssertions extends ExtendedSagaAssertions<SagaRunner> {
   /**
    * Negates the next assertion.
    */
-  not: Pick<SagaAssertions, Exclude<keyof SagaAssertions, 'not'>>
+  not: Omit<SagaAssertions, 'not'>
 }
 
 /**
