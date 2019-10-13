@@ -493,6 +493,19 @@ describe('should.yield()', () => {
 
     expect(runSaga).toThrow('Assertion failure')
   })
+
+  test('does not assert that the saga yields an effect without providing an effect argument', () => {
+    const saga = function*() {
+      yield call(fn1)
+    }
+
+    const runSaga = () =>
+      (createRunner(saga) as SagaRunner & {
+        should: { yield: () => SagaRunner }
+      }).should.yield()
+
+    expect(runSaga).toThrow('Missing effect argument')
+  })
 })
 
 describe('should.return()', () => {
@@ -512,6 +525,19 @@ describe('should.return()', () => {
     const runSaga = () => createRunner(saga).should.return('result2')
 
     expect(runSaga).toThrow('Assertion failure')
+  })
+
+  test('does not assert that the saga returns a value without providing a return value argument', () => {
+    const saga = function*() {
+      return 'result'
+    }
+
+    const runSaga = () =>
+      (createRunner(saga) as SagaRunner & {
+        should: { return: () => SagaRunner }
+      }).should.return()
+
+    expect(runSaga).toThrow('Missing return value argument')
   })
 })
 
@@ -550,6 +576,19 @@ describe('should.throw()', () => {
     const runSaga = () => createRunner(saga).should.throw(Error)
 
     expect(runSaga).toThrow('Assertion failure')
+  })
+
+  test('does not assert that the saga throws an error without providing an error pattern argument', () => {
+    const saga = function*() {
+      throw sagaError
+    }
+
+    const runSaga = () =>
+      (createRunner(saga) as SagaRunner & {
+        should: { throw: () => SagaRunner }
+      }).should.throw()
+
+    expect(runSaga).toThrow('Missing error pattern argument')
   })
 })
 
