@@ -1,5 +1,5 @@
 import { put, call, take } from 'redux-saga/effects'
-import { createRunner, throwError, finalize } from '../src/runner'
+import { createRunner, throwError, finalize } from '../src'
 
 const service = {
   getUser: (id: number) => {},
