@@ -1,11 +1,6 @@
 import { Effect, put, call, fork } from 'redux-saga/effects'
-import {
-  createRunner,
-  throwError,
-  finalize,
-  SagaRunner,
-  use,
-} from '../src/runner'
+import { createRunner, throwError, finalize, use } from '../src'
+import { SagaRunner } from '../src/types/runner'
 
 const fn1 = () => {}
 const fn2 = () => {}

@@ -28,7 +28,7 @@ import {
   race,
 } from 'redux-saga/effects'
 import { createMockTask } from '@redux-saga/testing-utils'
-import { createRunner } from '../src/runner'
+import { createRunner } from '../src'
 
 const fn1 = () => {}
 const fn2 = () => {}
