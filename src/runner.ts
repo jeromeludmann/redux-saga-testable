@@ -27,6 +27,11 @@ export interface SagaRunner {
   catch(error: ErrorPattern): SagaRunner
 
   /**
+   * Clones the current runner instance.
+   */
+  clone(): SagaRunner
+
+  /**
    * Runs the saga.
    */
   run(): SagaOutput
@@ -83,7 +88,14 @@ export function createRunner<Saga extends (...args: any[]) => any>(
     throw failure('Missing saga argument', createRunner)
   }
 
-  return _createRunner({ injections: [], assertions: [] }, saga, args)
+  return _createRunner(
+    {
+      injections: [],
+      assertions: [],
+    },
+    saga,
+    args,
+  )
 }
 
 /**
@@ -130,33 +142,33 @@ function _createRunner(
   saga: Saga,
   args: Parameters<Saga>,
 ): SagaRunner {
-  const runner: any = {}
-
-  runner.inject = _inject(state, saga, args)
-  runner.run = _run(state, saga, args)
-
   let negated = false
   const isNegated = () => negated
 
+  const runner: any = {}
+
+  runner.inject = _inject(runner, state)
+  runner.mock = runner.inject // alias: could be removed later
+  runner.catch = (e: ErrorPattern) => runner.should.throw(e)
+  runner.clone = _clone(state, saga, args)
+  runner.run = _run(state, saga, args)
+
+  // assertions interface
   runner.should = {
-    yield: _yield(state, isNegated, saga, args),
-    return: _return(state, isNegated, saga, args),
-    throw: _throw(state, isNegated, saga, args),
-    ...withExtendedSagaAssertions(runner),
+    yield: _yield(runner, state, isNegated),
+    return: _return(runner, state, isNegated),
+    throw: _throw(runner, state, isNegated),
+    ...withExtendedSagaAssertions(runner, state, isNegated, _yield),
   }
 
+  // negates the next assertion
   runner.should.not = runner.should
-
   runner.should = new Proxy(runner.should, {
     get(target: any, key) {
       negated = key === 'not'
       return target[key]
     },
   })
-
-  // aliases
-  runner.catch = runner.should.throw
-  runner.mock = runner.inject // could be removed later
 
   return runner
 }
@@ -166,11 +178,10 @@ interface Injection {
   values: any[]
 }
 
-const _inject = (
-  state: SagaRunnerState,
-  saga: Saga,
-  args: Parameters<Saga>,
-) => (effect: Effect, ...values: any[]) => {
+const _inject = (runner: SagaRunner, state: SagaRunnerState) => (
+  effect: Effect,
+  ...values: any[]
+): SagaRunner => {
   if (!effect) {
     throw failure('Missing effect argument', _inject)
   }
@@ -197,23 +208,17 @@ const _inject = (
     )
   }
 
-  return _createRunner(
-    {
-      ...state,
-      injections: [...state.injections, { effect, values }],
-    },
-    saga,
-    args,
-  )
+  state.injections.push({ effect, values })
+  return runner
 }
 
 const _yield = (
+  runner: SagaRunner,
   state: SagaRunnerState,
   isNegated: () => boolean,
-  saga: Saga,
-  args: Parameters<Saga>,
-) => (effect: Effect) => {
-  const assert = createAssert(isNegated())
+) => (effect: Effect): SagaRunner => {
+  const negated = isNegated()
+  const assert = (condition: boolean) => (negated ? !condition : condition)
 
   const newAssertion = (output: SagaOutput) => {
     if (!assert(output.effects.some(e => isDeepStrictEqual(e, effect)))) {
@@ -226,23 +231,17 @@ const _yield = (
     }
   }
 
-  return _createRunner(
-    {
-      ...state,
-      assertions: [...state.assertions, newAssertion],
-    },
-    saga,
-    args,
-  )
+  state.assertions.push(newAssertion)
+  return runner
 }
 
 const _return = (
+  runner: SagaRunner,
   state: SagaRunnerState,
   isNegated: () => boolean,
-  saga: Saga,
-  args: Parameters<Saga>,
-) => (value: any) => {
-  const assert = createAssert(isNegated())
+) => (value: any): SagaRunner => {
+  const negated = isNegated()
+  const assert = (condition: boolean) => (negated ? !condition : condition)
 
   const newAssertion = (output: SagaOutput) => {
     if (!assert(isDeepStrictEqual(output.return, value))) {
@@ -255,28 +254,21 @@ const _return = (
     }
   }
 
-  return _createRunner(
-    {
-      ...state,
-      assertions: [...state.assertions, newAssertion],
-    },
-    saga,
-    args,
-  )
+  state.assertions.push(newAssertion)
+  return runner
 }
 
 const _throw = (
+  runner: SagaRunner,
   state: SagaRunnerState,
   isNegated: () => boolean,
-  saga: Saga,
-  args: Parameters<Saga>,
-) => (pattern: ErrorPattern) => {
+) => (pattern: ErrorPattern): SagaRunner => {
+  const negated = isNegated()
+  const assert = (condition: boolean) => (negated ? !condition : condition)
+
   if (!pattern) {
     throw failure('Missing error pattern argument', _throw)
   }
-
-  const negated = isNegated()
-  const assert = createAssert(negated)
 
   const newAssertion = (output: SagaOutput) => {
     if (!output.error) {
@@ -305,29 +297,26 @@ const _throw = (
     )
   }
 
-  const newState = {
-    ...state,
-    assertions: [...state.assertions, newAssertion],
-  }
+  state.assertions.push(newAssertion)
 
   if (!negated) {
-    newState.errorPattern = pattern
+    state.errorPattern = pattern
   }
 
-  return _createRunner(newState, saga, args)
+  return runner
 }
 
-function createAssert(negated: boolean) {
-  return (condition: boolean) => (negated ? !condition : condition)
-}
-
-const _run = (state: SagaRunnerState, saga: Saga, args: any[]) => () => {
+const _run = (
+  state: SagaRunnerState,
+  saga: Saga,
+  args: any[],
+) => (): SagaOutput => {
   const output: SagaOutput = { effects: [] }
   const iterator = saga(...args)
   let sagaStep: IteratorResult<any>
   let nextValue = undefined
 
-  // prevents run() from mutating state
+  // prevents from mutating value injections
   const injections = state.injections.map(injection => ({
     ...injection,
     values: Array.from(injection.values),
@@ -368,6 +357,22 @@ const _run = (state: SagaRunnerState, saga: Saga, args: any[]) => () => {
   checkAssertions(state.assertions, output)
 
   return output
+}
+
+const _clone = (
+  state: SagaRunnerState,
+  saga: Saga,
+  args: any[],
+) => (): SagaRunner => {
+  return _createRunner(
+    {
+      injections: [...state.injections],
+      assertions: [...state.assertions],
+      errorPattern: state.errorPattern,
+    },
+    saga,
+    args,
+  )
 }
 
 function next(iterator: Iterator<any>, value: any) {
