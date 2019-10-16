@@ -48,13 +48,13 @@ export function matchError(error: Error, pattern: ErrorPattern) {
   return false
 }
 
-export function createError(message: string, ssf?: Function): Error {
+export function createError(message: string, stack?: Function): Error {
   const error = new Error(message)
 
-  if (ssf) {
+  if (stack) {
     const limit = Error.stackTraceLimit
     Error.stackTraceLimit = 1
-    Error.captureStackTrace(error, ssf)
+    Error.captureStackTrace(error, stack)
     Error.stackTraceLimit = limit
   }
 

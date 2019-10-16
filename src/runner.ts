@@ -22,9 +22,8 @@ export const _createRunner = (
 
   runner.inject = _inject(runner, state)
   runner.mock = runner.inject // alias: could be removed later
-  runner.catch = (e: ErrorPattern) => runner.should.throw(e)
   runner.clone = _clone(state, saga, args)
-  runner.run = _run(state, saga, args)
+  runner.run = _run(runner, state, saga, args)
 
   // assertions interface
   runner.should = {
@@ -43,6 +42,10 @@ export const _createRunner = (
     },
   })
 
+  // alias for should.throw(e)
+  runner.catch = (e: ErrorPattern) =>
+    _throw(runner, state, () => false, runner.catch)(e)
+
   return runner
 }
 
@@ -51,13 +54,13 @@ export const _inject = (runner: SagaRunner, state: SagaRunnerState) => (
   ...values: any[]
 ): SagaRunner => {
   if (!effect) {
-    throw createError('Missing effect argument', _inject)
+    throw createError('Missing effect argument', runner.inject)
   }
 
   if (values.length === 0) {
     throw createError(
       `The value to inject is missing\n\nGiven effect:\n\n${stringify(effect)}`,
-      _inject,
+      runner.inject,
     )
   }
 
@@ -72,7 +75,7 @@ export const _inject = (runner: SagaRunner, state: SagaRunnerState) => (
         `Existing injected values:\n\n${stringify(
           effectHasAlreadyInjectedValues.values,
         )}`,
-      _inject,
+      runner.inject,
     )
   }
 
@@ -96,7 +99,7 @@ export const _yield = (
         'Assertion failure\n\n' +
           `Expected effect:\n\n${stringify(effect)}\n\n` +
           `Received effects:\n\n${stringify(output.effects)}`,
-        _run,
+        runner.run,
       )
     }
   })
@@ -120,7 +123,7 @@ export const _return = (
         'Assertion failure\n\n' +
           `Expected return value:\n\n${stringify(value)}\n\n` +
           `Received return value:\n\n${stringify(output.return)}`,
-        _run,
+        runner.run,
       )
     }
   })
@@ -132,11 +135,27 @@ export const _throw = (
   runner: SagaRunner,
   state: SagaRunnerState,
   isNegated: () => boolean,
+  stack?: Function,
 ) => (pattern: ErrorPattern): SagaRunner => {
   const negated = isNegated()
 
   if (!pattern) {
-    throw createError('Missing error pattern argument', _throw)
+    throw createError(
+      'Missing error pattern argument',
+      stack || runner.should.throw,
+    )
+  }
+
+  if (!negated && state.errorPattern) {
+    throw createError(
+      'Error pattern already provided\n\n' +
+        `Given error pattern:\n\n${stringify(state.errorPattern)}`,
+      stack || runner.should.throw,
+    )
+  }
+
+  if (!negated) {
+    state.errorPattern = pattern
   }
 
   const assert = createAssert(
@@ -144,12 +163,12 @@ export const _throw = (
     negated,
   )
 
-  const newAssertion = (output: SagaOutput) => {
+  state.assertions.push((output: SagaOutput) => {
     if (!output.error) {
       throw createError(
         'No error thrown by the saga\n\n' +
           `Given error pattern:\n\n${stringify(state.errorPattern)}`,
-        _run,
+        runner.run,
       )
     }
 
@@ -158,24 +177,10 @@ export const _throw = (
         'Assertion failure\n\n' +
           `Expected error pattern:\n\n${stringify(pattern)}\n\n` +
           `Received thrown error:\n\n${stringify(output.error)}`,
-        _run,
+        runner.run,
       )
     }
-  }
-
-  if (!negated && state.errorPattern) {
-    throw createError(
-      'Error pattern already provided\n\n' +
-        `Given error pattern:\n\n${stringify(state.errorPattern)}`,
-      _throw,
-    )
-  }
-
-  state.assertions.push(newAssertion)
-
-  if (!negated) {
-    state.errorPattern = pattern
-  }
+  })
 
   return runner
 }
@@ -197,6 +202,7 @@ export const _clone = (
 }
 
 export const _run = (
+  runner: SagaRunner,
   state: SagaRunnerState,
   saga: Saga,
   args: any[],
@@ -236,7 +242,7 @@ export const _run = (
     }
 
     if (output.effects.length > 100) {
-      throw createError('Maximum yielded effects size reached', _run)
+      throw createError('Maximum yielded effects size reached', runner.run)
     }
 
     output.effects.push(sagaStep.value)
@@ -258,7 +264,7 @@ export const _run = (
       'Unused injection values\n\n' +
         `Given effect:\n\n${stringify(unusedInjection.effect)}\n\n` +
         `Unused injection values:\n\n${stringify(unusedInjection.values)}`,
-      _run,
+      runner.run,
     )
   }
 
