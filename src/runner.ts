@@ -2,7 +2,14 @@ import { isDeepStrictEqual } from 'util'
 import { Effect, Saga } from '@redux-saga/types'
 import { stringify } from './stringify'
 import { getExtendedSagaAssertions } from './aliases'
-import { createError, matchError, next, isEffect, createAssert } from './utils'
+import {
+  createError,
+  matchError,
+  next,
+  isEffect,
+  createAssert,
+  resetOutputCache,
+} from './utils'
 import {
   SagaRunner,
   SagaRunnerState,
@@ -77,6 +84,7 @@ export const _inject = (runner: SagaRunner, state: SagaRunnerState) => (
 
   state.injections.push({ effect, values })
 
+  resetOutputCache(state)
   return runner
 }
 
@@ -97,6 +105,7 @@ export const _catch = (runner: SagaRunner, state: SagaRunnerState) => (
 
   state.catchingError = pattern
 
+  resetOutputCache(state)
   return runner
 }
 
@@ -189,7 +198,11 @@ export const _run = (
   saga: Saga,
   args: any[],
 ) => (): SagaOutput => {
-  const output: SagaOutput = { effects: [] }
+  if (state.output !== undefined) {
+    return state.output
+  }
+
+  state.output = { effects: [] }
 
   const iterator = saga(...args)
   let sagaStep: IteratorResult<any>
@@ -205,12 +218,12 @@ export const _run = (
     try {
       sagaStep = next(iterator, nextValue)
     } catch (sagaError) {
-      output.error = sagaError
+      state.output.error = sagaError
       break
     }
 
     if (sagaStep.done) {
-      output.return = sagaStep.value
+      state.output.return = sagaStep.value
       break
     }
 
@@ -219,11 +232,11 @@ export const _run = (
       continue
     }
 
-    if (output.effects.length > 100) {
+    if (state.output.effects.length > 100) {
       throw createError('Maximum yielded effects size reached', runner.run)
     }
 
-    output.effects.push(sagaStep.value)
+    state.output.effects.push(sagaStep.value)
 
     // injects value to the next iteration
     const injection = injections.find(injection =>
@@ -246,12 +259,12 @@ export const _run = (
   }
 
   // re-throws saga error if needed
-  if (output.error) {
+  if (state.output.error) {
     if (
       !state.catchingError ||
-      !matchError(output.error, state.catchingError)
+      !matchError(state.output.error, state.catchingError)
     ) {
-      throw output.error
+      throw state.output.error
     }
   }
 
@@ -264,5 +277,5 @@ export const _run = (
     )
   }
 
-  return output
+  return state.output
 }

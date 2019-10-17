@@ -90,6 +90,7 @@ export interface Finalize {
 export interface SagaRunnerState {
   injections: Injection[]
   catchingError?: ErrorPattern
+  output?: SagaOutput
 }
 
 export interface Injection {
