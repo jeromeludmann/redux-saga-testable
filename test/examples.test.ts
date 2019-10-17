@@ -23,7 +23,6 @@ test('fetchUser() should dispatch FETCH_SUCCESS', () => {
   createRunner(fetchUser, id)
     .inject(call(service.getUser, id), mockUser)
     .should.put({ type: 'FETCH_SUCCESS', payload: mockUser })
-    .run()
 })
 
 test('fetchUser() should dispatch FETCH_FAILURE', () => {
@@ -33,7 +32,6 @@ test('fetchUser() should dispatch FETCH_FAILURE', () => {
   createRunner(fetchUser, id)
     .inject(call(service.getUser, id), throwError(mockError))
     .should.put({ type: 'FETCH_FAILURE', payload: mockError.message })
-    .run()
 })
 
 function* watchNotify() {
@@ -51,7 +49,6 @@ test('watchNotify() should dispatch NOTIFY_END', () => {
   createRunner(watchNotify)
     .inject(call(service.notify), finalize())
     .should.put({ type: 'NOTIFY_END' })
-    .run()
 })
 
 function* findUser(id: number) {
@@ -69,6 +66,6 @@ test('findUser() should throw an error', () => {
 
   createRunner(findUser, id)
     .inject(call(service.getUser, id), undefined)
+    .catch(Error)
     .should.throw(/^Unable to find user/)
-    .run()
 })

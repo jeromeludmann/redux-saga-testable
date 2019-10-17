@@ -42,7 +42,6 @@ test('should.take()', () => {
   createRunner(saga)
     .should.take('FETCH_USER')
     .should.not.take('FETCH_PRODUCT')
-    .run()
 })
 
 test('should.takeMaybe()', () => {
@@ -53,7 +52,6 @@ test('should.takeMaybe()', () => {
   createRunner(saga)
     .should.takeMaybe('FETCH_USER')
     .should.not.takeMaybe('FETCH_PRODUCT')
-    .run()
 })
 
 test('should.takeEvery()', () => {
@@ -64,7 +62,6 @@ test('should.takeEvery()', () => {
   createRunner(saga)
     .should.takeEvery('FETCH_USER', fn1)
     .should.not.takeEvery('FETCH_USER', fn2)
-    .run()
 })
 
 test('should.takeLatest()', () => {
@@ -75,7 +72,6 @@ test('should.takeLatest()', () => {
   createRunner(saga)
     .should.takeLatest('FETCH_USER', fn1)
     .should.not.takeLatest('FETCH_USER', fn2)
-    .run()
 })
 
 test('should.takeLeading()', () => {
@@ -86,7 +82,6 @@ test('should.takeLeading()', () => {
   createRunner(saga)
     .should.takeLeading('FETCH_USER', fn1)
     .should.not.takeLeading('FETCH_PRODUCT', fn1)
-    .run()
 })
 
 test('should.put()', () => {
@@ -97,7 +92,6 @@ test('should.put()', () => {
   createRunner(saga)
     .should.put({ type: 'SUCCESS' })
     .should.not.put({ type: 'FAILURE' })
-    .run()
 })
 
 test('should.putResolve()', () => {
@@ -108,7 +102,6 @@ test('should.putResolve()', () => {
   createRunner(saga)
     .should.putResolve({ type: 'SUCCESS' })
     .should.not.putResolve({ type: 'FAILURE' })
-    .run()
 })
 
 test('should.call()', () => {
@@ -119,7 +112,6 @@ test('should.call()', () => {
   createRunner(saga)
     .should.call(fn1)
     .should.not.call(fn2)
-    .run()
 })
 
 test('should.apply()', () => {
@@ -130,7 +122,6 @@ test('should.apply()', () => {
   createRunner(saga)
     .should.apply({ key: 'value' }, fn1, [])
     .should.not.apply({ key: 'value' }, fn2, [])
-    .run()
 })
 
 test('should.cps()', () => {
@@ -141,7 +132,6 @@ test('should.cps()', () => {
   createRunner(saga)
     .should.cps(fn1)
     .should.not.cps(fn2)
-    .run()
 })
 
 test('should.fork()', () => {
@@ -152,7 +142,6 @@ test('should.fork()', () => {
   createRunner(saga)
     .should.fork(fn1)
     .should.not.fork(fn2)
-    .run()
 })
 
 test('should.spawn()', () => {
@@ -163,7 +152,6 @@ test('should.spawn()', () => {
   createRunner(saga)
     .should.spawn(fn1)
     .should.not.spawn(fn2)
-    .run()
 })
 
 test('should.join()', () => {
@@ -178,7 +166,6 @@ test('should.join()', () => {
     .inject(fork(fn1), mockTask)
     .should.join(mockTask)
     .should.not.join(createMockTask())
-    .run()
 })
 
 test('should.cancel()', () => {
@@ -193,7 +180,6 @@ test('should.cancel()', () => {
     .inject(fork(fn1), mockTask)
     .should.cancel(mockTask)
     .should.not.cancel(createMockTask())
-    .run()
 })
 
 test('should.select()', () => {
@@ -207,7 +193,6 @@ test('should.select()', () => {
   createRunner(saga)
     .should.select(getUser)
     .should.not.select(getProduct)
-    .run()
 })
 
 test('should.actionChannel()', () => {
@@ -218,7 +203,6 @@ test('should.actionChannel()', () => {
   createRunner(saga)
     .should.actionChannel('FETCH_USER')
     .should.not.actionChannel('FETCH_PRODUCT')
-    .run()
 })
 
 test('should.flush()', () => {
@@ -231,7 +215,6 @@ test('should.flush()', () => {
   createRunner(saga)
     .should.flush(chan)
     .should.not.flush(channel())
-    .run()
 })
 
 test('should.cancelled()', () => {
@@ -241,13 +224,9 @@ test('should.cancelled()', () => {
     }
   }
 
-  createRunner(saga, true)
-    .should.cancelled()
-    .run()
+  createRunner(saga, true).should.cancelled()
 
-  createRunner(saga, false)
-    .should.not.cancelled()
-    .run()
+  createRunner(saga, false).should.not.cancelled()
 })
 
 test('should.setContext()', () => {
@@ -258,7 +237,6 @@ test('should.setContext()', () => {
   createRunner(saga)
     .should.setContext({ key: 'user' })
     .should.not.setContext({ key: 'product' })
-    .run()
 })
 
 test('should.getContext()', () => {
@@ -269,7 +247,6 @@ test('should.getContext()', () => {
   createRunner(saga)
     .should.getContext('key')
     .should.not.getContext('name')
-    .run()
 })
 
 test('should.delay()', () => {
@@ -280,7 +257,6 @@ test('should.delay()', () => {
   createRunner(saga)
     .should.delay(1000)
     .should.not.delay(3000)
-    .run()
 })
 
 test('should.throttle()', () => {
@@ -293,7 +269,6 @@ test('should.throttle()', () => {
     .should.not.throttle(3000, 'FETCH_USER', fn1)
     .should.not.throttle(1000, 'FETCH_PRODUCT', fn1)
     .should.not.throttle(1000, 'FETCH_USER', fn2)
-    .run()
 })
 
 test('should.debounce()', () => {
@@ -306,7 +281,6 @@ test('should.debounce()', () => {
     .should.not.debounce(3000, 'FETCH_USER', fn1)
     .should.not.debounce(1000, 'FETCH_PRODUCT', fn1)
     .should.not.debounce(1000, 'FETCH_USER', fn2)
-    .run()
 })
 
 test('should.retry()', () => {
@@ -319,7 +293,6 @@ test('should.retry()', () => {
     .should.not.retry(5, 10, fn1)
     .should.not.retry(3, 30, fn1)
     .should.not.retry(5, 10, fn2)
-    .run()
 })
 
 test('should.all()', () => {
@@ -332,7 +305,6 @@ test('should.all()', () => {
     .should.not.all([call(fn1)])
     .should.not.all([call(fn1), call(fn2), call(fn3)])
     .should.not.all([call(fn2), call(fn1)])
-    .run()
 })
 
 test('should.race()', () => {
@@ -360,5 +332,4 @@ test('should.race()', () => {
       response1: call(fn2),
       response2: call(fn1),
     })
-    .run()
 })
