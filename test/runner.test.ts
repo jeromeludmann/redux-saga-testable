@@ -1,6 +1,6 @@
 import { Effect, put, call, fork } from 'redux-saga/effects'
 import { createRunner, throwError, finalize, use } from '../src'
-import { SagaRunner } from '../src/types/runner'
+import { SagaRunner, ThrowError } from '../src/types/runner'
 
 const fn1 = () => {}
 const fn2 = () => {}
@@ -167,6 +167,19 @@ describe('inject()', () => {
     expect(output.effects).toContainEqual(
       put({ type: 'FAILURE', payload: sagaError.message }),
     )
+  })
+
+  test('does not inject a thrown error without providing an error argument', () => {
+    const saga = function*() {
+      yield call(fn1)
+    }
+
+    const runSaga = () =>
+      createRunner(saga)
+        .inject(call(fn1), (throwError as () => ThrowError)())
+        .run()
+
+    expect(runSaga).toThrow('Missing error argument')
   })
 
   test('injects a finalize signal', () => {

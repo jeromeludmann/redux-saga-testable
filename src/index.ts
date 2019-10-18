@@ -32,6 +32,10 @@ export const use = createRunner
  * Throws an error from the saga when injected as a value.
  */
 export function throwError(error: Error): ThrowError {
+  if (!error) {
+    throw createError('Missing error argument', throwError)
+  }
+
   return {
     [THROW_ERROR]: true,
     error,
