@@ -1,4 +1,4 @@
-import { Effect } from '@redux-saga/types'
+import { Effect, Saga } from '@redux-saga/types'
 import { ExtendedSagaAssertions } from './aliases'
 
 export interface SagaRunner {
@@ -88,6 +88,8 @@ export interface Finalize {
 }
 
 export interface SagaRunnerState {
+  saga: Saga
+  arguments: Parameters<Saga>
   injections: Injection[]
   catchingError?: ErrorPattern
   output?: SagaOutput

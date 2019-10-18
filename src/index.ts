@@ -19,7 +19,11 @@ export function createRunner<Saga extends (...args: any[]) => any>(
     throw createError('Missing saga argument', createRunner)
   }
 
-  return _createRunner({ injections: [] }, saga, args)
+  return _createRunner({
+    saga,
+    arguments: args,
+    injections: [],
+  })
 }
 
 /**

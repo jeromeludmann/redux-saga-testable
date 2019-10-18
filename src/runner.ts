@@ -1,5 +1,5 @@
 import { isDeepStrictEqual } from 'util'
-import { Effect, Saga } from '@redux-saga/types'
+import { Effect } from '@redux-saga/types'
 import { stringify } from './stringify'
 import { getExtendedSagaAssertions } from './aliases'
 import {
@@ -17,11 +17,7 @@ import {
   SagaOutput,
 } from './types/runner'
 
-export const _createRunner = (
-  state: SagaRunnerState,
-  saga: Saga,
-  args: Parameters<Saga>,
-): SagaRunner => {
+export const _createRunner = (state: SagaRunnerState): SagaRunner => {
   let negated = false
   const isNegated = () => negated
   const runner: any = {}
@@ -29,15 +25,15 @@ export const _createRunner = (
   runner.inject = _inject(runner, state)
   runner.mock = runner.inject // alias: could be removed later
   runner.catch = _catch(runner, state)
-  runner.clone = _clone(state, saga, args)
-  runner.run = _run(runner, state, saga, args)
+  runner.clone = _clone(state)
+  runner.run = _run(runner, state)
 
   // creates the assertions interface
   runner.should = {
-    yield: _yield(runner, state, saga, args, isNegated),
-    return: _return(runner, state, saga, args, isNegated),
-    throw: _throw(runner, state, saga, args, isNegated),
-    ...getExtendedSagaAssertions(runner, state, saga, args, isNegated, _yield),
+    yield: _yield(runner, state, isNegated),
+    return: _return(runner, state, isNegated),
+    throw: _throw(runner, state, isNegated),
+    ...getExtendedSagaAssertions(runner, state, isNegated, _yield),
   }
 
   // negates the next assertion
@@ -112,8 +108,6 @@ export const _catch = (runner: SagaRunner, state: SagaRunnerState) => (
 export const _yield = (
   runner: SagaRunner,
   state: SagaRunnerState,
-  saga: Saga,
-  args: Parameters<Saga>,
   isNegated: () => boolean,
   stackFunction?: Function,
 ) => (effect: Effect): SagaRunner => {
@@ -124,7 +118,7 @@ export const _yield = (
     )
   }
 
-  const output = _run(runner, state, saga, args, stackFunction)()
+  const output = _run(runner, state, stackFunction)()
 
   const assert = createAssert(
     output => output.effects.some(e => isDeepStrictEqual(e, effect)),
@@ -146,8 +140,6 @@ export const _yield = (
 export const _return = (
   runner: SagaRunner,
   state: SagaRunnerState,
-  saga: Saga,
-  args: Parameters<Saga>,
   isNegated: () => boolean,
   stackFunction?: Function,
 ) => (value: any): SagaRunner => {
@@ -158,7 +150,7 @@ export const _return = (
     )
   }
 
-  const output = _run(runner, state, saga, args, stackFunction)()
+  const output = _run(runner, state, stackFunction)()
 
   const assert = createAssert(
     output => isDeepStrictEqual(output.return, value),
@@ -180,8 +172,6 @@ export const _return = (
 export const _throw = (
   runner: SagaRunner,
   state: SagaRunnerState,
-  saga: Saga,
-  args: Parameters<Saga>,
   isNegated: () => boolean,
   stackFunction?: Function,
 ) => (pattern: ErrorPattern): SagaRunner => {
@@ -192,7 +182,7 @@ export const _throw = (
     )
   }
 
-  const output = _run(runner, state, saga, args, stackFunction)()
+  const output = _run(runner, state, stackFunction)()
 
   const assert = createAssert(
     output => !!output.error && matchError(output.error, pattern),
@@ -211,26 +201,16 @@ export const _throw = (
   return runner
 }
 
-export const _clone = (
-  state: SagaRunnerState,
-  saga: Saga,
-  args: any[],
-) => (): SagaRunner => {
-  return _createRunner(
-    {
-      injections: [...state.injections],
-      catchingError: state.catchingError,
-    },
-    saga,
-    args,
-  )
+export const _clone = (state: SagaRunnerState) => (): SagaRunner => {
+  return _createRunner({
+    ...state,
+    injections: [...state.injections],
+  })
 }
 
 export const _run = (
   runner: SagaRunner,
   state: SagaRunnerState,
-  saga: Saga,
-  args: any[],
   stackFunction?: Function,
 ) => (): SagaOutput => {
   if (state.output !== undefined) {
@@ -239,7 +219,7 @@ export const _run = (
 
   state.output = { effects: [] }
 
-  const iterator = saga(...args)
+  const iterator = state.saga(...state.arguments)
   let sagaStep: IteratorResult<any>
   let nextValue = undefined
 
