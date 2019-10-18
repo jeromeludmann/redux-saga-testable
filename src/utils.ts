@@ -54,13 +54,13 @@ export function matchError(error: Error, pattern: ErrorPattern): boolean {
   return false
 }
 
-export function createError(message: string, stack?: Function): Error {
+export function createError(message: string, stackFunction?: Function): Error {
   const error = new Error(message)
 
-  if (stack) {
+  if (stackFunction) {
     const limit = Error.stackTraceLimit
     Error.stackTraceLimit = 1
-    Error.captureStackTrace(error, stack)
+    Error.captureStackTrace(error, stackFunction)
     Error.stackTraceLimit = limit
   }
 
