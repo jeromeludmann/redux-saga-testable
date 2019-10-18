@@ -34,10 +34,10 @@ export const _createRunner = (
 
   // creates the assertions interface
   runner.should = {
-    yield: _yield(runner, isNegated),
-    return: _return(runner, isNegated),
-    throw: _throw(runner, isNegated),
-    ...getExtendedSagaAssertions(runner, isNegated, _yield),
+    yield: _yield(runner, state, saga, args, isNegated),
+    return: _return(runner, state, saga, args, isNegated),
+    throw: _throw(runner, state, saga, args, isNegated),
+    ...getExtendedSagaAssertions(runner, state, saga, args, isNegated, _yield),
   }
 
   // negates the next assertion
@@ -109,10 +109,15 @@ export const _catch = (runner: SagaRunner, state: SagaRunnerState) => (
   return runner
 }
 
-export const _yield = (runner: SagaRunner, isNegated: () => boolean) => (
-  effect: Effect,
-): SagaRunner => {
-  const output = runner.run()
+export const _yield = (
+  runner: SagaRunner,
+  state: SagaRunnerState,
+  saga: Saga,
+  args: Parameters<Saga>,
+  isNegated: () => boolean,
+  stackFunction?: Function,
+) => (effect: Effect): SagaRunner => {
+  const output = _run(runner, state, saga, args, stackFunction)()
 
   const assert = createAssert(
     output => output.effects.some(e => isDeepStrictEqual(e, effect)),
@@ -124,17 +129,22 @@ export const _yield = (runner: SagaRunner, isNegated: () => boolean) => (
       'Assertion failure\n\n' +
         `Expected effect:\n\n${stringify(effect)}\n\n` +
         `Received effects:\n\n${stringify(output.effects)}`,
-      runner.should.yield,
+      stackFunction || runner.should.yield,
     )
   }
 
   return runner
 }
 
-export const _return = (runner: SagaRunner, isNegated: () => boolean) => (
-  value: any,
-): SagaRunner => {
-  const output = runner.run()
+export const _return = (
+  runner: SagaRunner,
+  state: SagaRunnerState,
+  saga: Saga,
+  args: Parameters<Saga>,
+  isNegated: () => boolean,
+  stackFunction?: Function,
+) => (value: any): SagaRunner => {
+  const output = _run(runner, state, saga, args, stackFunction)()
 
   const assert = createAssert(
     output => isDeepStrictEqual(output.return, value),
@@ -146,7 +156,7 @@ export const _return = (runner: SagaRunner, isNegated: () => boolean) => (
       'Assertion failure\n\n' +
         `Expected return value:\n\n${stringify(value)}\n\n` +
         `Received return value:\n\n${stringify(output.return)}`,
-      runner.should.return,
+      stackFunction || runner.should.return,
     )
   }
 
@@ -155,10 +165,13 @@ export const _return = (runner: SagaRunner, isNegated: () => boolean) => (
 
 export const _throw = (
   runner: SagaRunner,
+  state: SagaRunnerState,
+  saga: Saga,
+  args: Parameters<Saga>,
   isNegated: () => boolean,
-  stack?: Function,
+  stackFunction?: Function,
 ) => (pattern: ErrorPattern): SagaRunner => {
-  const output = runner.run()
+  const output = _run(runner, state, saga, args, stackFunction)()
 
   const assert = createAssert(
     output => !!output.error && matchError(output.error, pattern),
@@ -170,7 +183,7 @@ export const _throw = (
       'Assertion failure\n\n' +
         `Expected error pattern:\n\n${stringify(pattern)}\n\n` +
         `Received thrown error:\n\n${stringify(output.error)}`,
-      runner.should.throw,
+      stackFunction || runner.should.throw,
     )
   }
 
@@ -197,6 +210,7 @@ export const _run = (
   state: SagaRunnerState,
   saga: Saga,
   args: any[],
+  stackFunction?: Function,
 ) => (): SagaOutput => {
   if (state.output !== undefined) {
     return state.output
@@ -233,7 +247,10 @@ export const _run = (
     }
 
     if (state.output.effects.length > 100) {
-      throw createError('Maximum yielded effects size reached', runner.run)
+      throw createError(
+        'Maximum yielded effects size reached',
+        stackFunction || runner.run,
+      )
     }
 
     state.output.effects.push(sagaStep.value)
@@ -254,7 +271,7 @@ export const _run = (
       'Unused injection values\n\n' +
         `Given effect:\n\n${stringify(unusedInjection.effect)}\n\n` +
         `Unused injection values:\n\n${stringify(unusedInjection.values)}`,
-      runner.run,
+      stackFunction || runner.run,
     )
   }
 
@@ -273,7 +290,7 @@ export const _run = (
     throw createError(
       'No error thrown by the saga\n\n' +
         `Given error pattern:\n\n${stringify(state.catchingError)}`,
-      runner.run,
+      stackFunction || runner.run,
     )
   }
 
