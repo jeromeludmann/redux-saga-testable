@@ -26,29 +26,23 @@ import {
   all,
   race,
 } from 'redux-saga/effects'
-import { Effect, Saga } from '@redux-saga/types'
+import { Effect } from '@redux-saga/types'
 import { SagaRunner, SagaRunnerState } from './types/runner'
 
 export const getExtendedSagaAssertions = (
   runner: SagaRunner,
   state: SagaRunnerState,
-  saga: Saga,
-  args: Parameters<Saga>,
   isNegated: () => boolean,
   _yield: (
     runner: SagaRunner,
     state: SagaRunnerState,
-    saga: Saga,
-    args: Parameters<Saga>,
     isNegated: () => boolean,
     stackFunction?: Function,
   ) => (...args: any[]) => SagaRunner,
 ) => {
   const createAlias = (effectCreator: (...effectArgs: any[]) => Effect) => {
     const fn = (...effectArgs: any[]) =>
-      _yield(runner, state, saga, args, isNegated, fn)(
-        effectCreator(...effectArgs),
-      )
+      _yield(runner, state, isNegated, fn)(effectCreator(...effectArgs))
     return fn
   }
 
