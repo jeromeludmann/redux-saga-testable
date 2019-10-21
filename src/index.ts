@@ -22,7 +22,7 @@ export function createRunner<Saga extends (...args: any[]) => any>(
   return _createRunner({
     saga,
     arguments: args,
-    injections: [],
+    environment: [],
   })
 }
 
@@ -33,7 +33,7 @@ export function createRunner<Saga extends (...args: any[]) => any>(
 export const use = createRunner
 
 /**
- * Throws an error from the saga when injected as a value.
+ * Throws an error from the saga when mapped as a value.
  */
 export function throwError(error: Error): ThrowError {
   if (!error) {
@@ -47,7 +47,7 @@ export function throwError(error: Error): ThrowError {
 }
 
 /**
- * Finalizes the saga when injected as a value.
+ * Finalizes the saga when mapped as a value.
  */
 export function finalize(): Finalize {
   return {

@@ -1,6 +1,6 @@
 # redux-saga-testable
 
-Practical unit test library for [`redux-saga`](https://github.com/redux-saga/redux-saga) providing features like effects recording, values injection and built-in assertions.
+Practical unit test library for [`redux-saga`](https://github.com/redux-saga/redux-saga) providing features like effect recording, effect-value mapping and built-in assertions.
 
 [![Build Status](https://travis-ci.org/jeromeludmann/redux-saga-testable.svg)](https://travis-ci.org/jeromeludmann/redux-saga-testable)
 [![Coverage Status](https://coveralls.io/repos/github/jeromeludmann/redux-saga-testable/badge.svg)](https://coveralls.io/github/jeromeludmann/redux-saga-testable)
@@ -10,7 +10,7 @@ Practical unit test library for [`redux-saga`](https://github.com/redux-saga/red
 
 The drawback is that we have to manually iterate over the generator function for each yielded effect. It makes the tests not very intuitive to write and noisy to read.
 
-When testing a saga, we should not have to worry about what the generator function does behind. We would just like to check some arbitrary effects and eventually inject some values instead of triggering side effects. This simple library tries to make it easier.
+When testing a saga, we should not have to worry about what the generator function does behind. We would just like to check some arbitrary effects and eventually map effects to some values instead of triggering side effects. This simple library tries to make it easier.
 
 ## Table of contents
 
@@ -68,7 +68,7 @@ test('fetchUser() should dispatch FETCH_SUCCESS', () => {
   const mockUser = { user: 'name' }
 
   createRunner(fetchUser, id)
-    .inject(call(service.getUser, id), mockUser)
+    .map(call(service.getUser, id), mockUser)
     .should.put({ type: 'FETCH_SUCCESS', payload: mockUser })
     .run()
 })
@@ -76,7 +76,7 @@ test('fetchUser() should dispatch FETCH_SUCCESS', () => {
 
 [`createRunner(fetchUser, id)`](#createrunnersaga-args) creates a [`SagaRunner`](#sagarunner) object that exposes methods allowing to set up the behavior of the runner.
 
-[`.inject(call(service.getUser, id), mockUser)`](#runnerinjecteffect-value--nextvalues) allows to inject values into the saga when an effect is yielded.
+[`.map(call(service.getUser, id), mockUser)`](#runnermapeffect-value--nextvalues) allows to map an effect to a value.
 
 [`.should.put({ type: 'FETCH_SUCCESS', payload: mockUser })`](#runnershouldyieldeffect) asserts that the saga yields a `PUT` effect (you can assert with any effect creator).
 
@@ -94,13 +94,13 @@ test('fetchUser() should dispatch FETCH_FAILURE', () => {
   const mockError = new Error('Unable to fetch user')
 
   createRunner(fetchUser, id)
-    .inject(call(service.getUser, id), throwError(mockError))
+    .map(call(service.getUser, id), throwError(mockError))
     .should.put({ type: 'FETCH_FAILURE', payload: mockError.message })
     .run()
 })
 ```
 
-[`throwError()`](#throwerrorerror) tells the runner that we want to inject an error that **will be thrown** when the saga will yield the given effect, instead of just assigning a simple value as a result of the effect.
+[`throwError()`](#throwerrorerror) tells the runner that we want to map an effect to an error that **will be thrown** when the saga will yield the given effect, instead of just assigning a simple value as a result of the effect.
 
 ### Finalize a saga prematurely
 
@@ -119,14 +119,14 @@ function* watchNotify() {
 }
 ```
 
-You can do it by inject [`finalize()`](#finalize) as a value:
+You can do it by map an effect to [`finalize()`](#finalize) as a value:
 
 ```ts
 import { createRunner, finalize } from 'redux-saga-testable'
 
 test('watchNotify() should dispatch NOTIFY_END', () => {
   createRunner(watchNotify)
-    .inject(call(service.notify), finalize())
+    .map(call(service.notify), finalize())
     .should.put({ type: 'NOTIFY_END' })
     .run()
 })
@@ -159,7 +159,7 @@ test('findUser() should throw an error', () => {
   const id = 789
 
   createRunner(findUser, id)
-    .inject(call(service.getUser, id), undefined)
+    .map(call(service.getUser, id), undefined)
     .should.throw(/^Unable to find user/)
     .run()
 })
@@ -173,7 +173,7 @@ The runner will catch the error thrown by the saga and will record it under the 
 
 In order to have more concise tests, this feature allows to manage multiple runner instances (almost same purpose of [`cloneableGenerator`](https://github.com/redux-saga/redux-saga/tree/master/docs/api#cloneablegeneratorgeneratorfunc)).
 
-When `runner.clone()` is invoked, a new [`SagaRunner`](#sagarunner) is created from the previous state. It is no longer required to repeat data injections or effect assertions.
+When `runner.clone()` is invoked, a new [`SagaRunner`](#sagarunner) is created from the previous state. It is no longer required to remap effects again.
 
 ```ts
 test('clones instances of a saga runner several times', () => {
@@ -202,12 +202,12 @@ test('clones instances of a saga runner several times', () => {
   const runner1 = runner.clone()
   const runner2 = runner.clone()
 
-  runner1.inject(call(fn1), 'result1')
+  runner1.map(call(fn1), 'result1')
   runner1.should.yield(fork(fn1))
   runner1.should.not.yield(fork(fn2))
   runner1.should.not.yield(fork(fn3))
 
-  runner2.inject(call(fn2), 'result2')
+  runner2.map(call(fn2), 'result2')
 
   const runner3 = runner2.clone()
 
@@ -215,7 +215,7 @@ test('clones instances of a saga runner several times', () => {
   runner2.should.yield(fork(fn2))
   runner2.should.not.yield(fork(fn3))
 
-  runner3.inject(call(fn3), 'result3')
+  runner3.map(call(fn3), 'result3')
   runner3.should.not.yield(fork(fn1))
   runner3.should.yield(fork(fn2))
   runner3.should.yield(fork(fn3))
@@ -251,19 +251,19 @@ Returns a [`SagaRunner`](#sagarunner).
 const runner = createRunner(fetchUser, 'user_id')
 ```
 
-### `runner.inject(effect, value [, ...nextValues])`
+### `runner.map(effect, value [, ...nextValues])`
 
-Injects a value into the saga when an effect is yielded.
+Maps an effect to a value.
 
 - `effect: Effect` - an effect to match
-- `value: any` - a value to inject
-- `nextValues?: any[]` - next values to inject
+- `value: any` - a value to use
+- `nextValues?: any[]` - next values to use
 
 Returns the current [`SagaRunner`](#sagarunner).
 
 ```ts
 createRunner(fetchUser, 'user_id')
-  .inject(call(getUser, 'user_id'), { name: 'mock name' })
+  .map(call(getUser, 'user_id'), { name: 'mock name' })
   .run()
 ```
 
@@ -357,7 +357,7 @@ Returns a copy of the current [`SagaRunner`](#sagarunner).
 const rootRunner = createRunner(fetchUser, 'user_id')
 const clonedRunner = rootRunner.clone()
 
-clonedRunner.inject(call(getUser), { name: 'mock name' })
+clonedRunner.map(call(getUser), { name: 'mock name' })
 
 rootRunner.should
   .put({
@@ -386,27 +386,27 @@ createRunner(fetchUser).run()
 
 ### `throwError(error)`
 
-Throws an error from the saga when injected as a value.
+Throws an error from the saga when mapped as a value.
 
 - `error: Error` - an error to throw
 
-Returns a `ThrowError` value to inject.
+Returns a `ThrowError` value.
 
 ```ts
 createRunner(fetchUser)
-  .inject(getUser, throwError(new Error('Unable to get user')))
+  .map(getUser, throwError(new Error('Unable to get user')))
   .run()
 ```
 
 ### `finalize()`
 
-Finalizes the saga when injected as a value.
+Finalizes the saga when mapped as a value.
 
-Returns a `Finalize` value to inject.
+Returns a `Finalize` value.
 
 ```ts
 createRunner(fetchUser)
-  .inject(getUser, finalize())
+  .map(getUser, finalize())
   .run()
 ```
 
@@ -414,7 +414,7 @@ createRunner(fetchUser)
 
 The saga runner object returned by [`createRunner()`](#createrunnersaga-args).
 
-- [`inject: Function`](#runnerinjecteffect-value--nextvalues)
+- [`map: Function`](#runnermapeffect-value--nextvalues)
 - [`should.yield: Function`](#runnershouldyieldeffect)
 - [`should.return: Function`](#runnershouldreturnvalue)
 - [`should.throw: Function`](#runnershouldthrowerror)

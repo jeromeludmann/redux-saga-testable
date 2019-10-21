@@ -163,7 +163,7 @@ test('should.join()', () => {
   }
 
   createRunner(saga)
-    .inject(fork(fn1), mockTask)
+    .map(fork(fn1), mockTask)
     .should.join(mockTask)
     .should.not.join(createMockTask())
 })
@@ -177,7 +177,7 @@ test('should.cancel()', () => {
   }
 
   createRunner(saga)
-    .inject(fork(fn1), mockTask)
+    .map(fork(fn1), mockTask)
     .should.cancel(mockTask)
     .should.not.cancel(createMockTask())
 })

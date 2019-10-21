@@ -3,13 +3,13 @@ import { ExtendedSagaAssertions } from './aliases'
 
 export interface SagaRunner {
   /**
-   * Injects a value into the saga when an effect is yielded.
+   * Maps an effect to a value.
    */
-  inject(effect: Effect, value: any, ...nextValues: any[]): SagaRunner
+  map(effect: Effect, value: any, ...nextValues: any[]): SagaRunner
 
   /**
    * Mocks the result of an effect.
-   * @deprecated Use `inject()` instead.
+   * @deprecated Use `map()` instead.
    */
   mock(effect: Effect, result: any, ...nextResults: any[]): SagaRunner
 
@@ -90,12 +90,12 @@ export interface Finalize {
 export interface SagaRunnerState {
   saga: Saga
   arguments: Parameters<Saga>
-  injections: Injection[]
+  environment: Mapping[]
   catchingError?: ErrorPattern
   output?: SagaOutput
 }
 
-export interface Injection {
+export interface Mapping {
   effect: Effect
   values: any[]
 }
