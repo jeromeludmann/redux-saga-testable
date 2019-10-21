@@ -16,7 +16,7 @@ describe('createRunner()', () => {
 
     const runner = createRunner(saga)
 
-    expect(runner).toHaveProperty('inject')
+    expect(runner).toHaveProperty('map')
     expect(runner).toHaveProperty('should.yield')
     expect(runner).toHaveProperty('should.return')
     expect(runner).toHaveProperty('should.throw')
@@ -26,7 +26,7 @@ describe('createRunner()', () => {
 
     // prevents breaking changes
     expect(use).toStrictEqual(createRunner)
-    expect(runner.mock).toStrictEqual(runner.inject)
+    expect(runner.mock).toStrictEqual(runner.map)
   })
 
   test('does not create a runner without providing a saga', () => {
@@ -78,9 +78,9 @@ describe('run()', () => {
       yield put({ type: 'SUCCESS', payload: [result1, result2] })
     }
 
-    const runner = createRunner(saga).inject(call(fn1), 'result1')
+    const runner = createRunner(saga).map(call(fn1), 'result1')
     const output1 = runner.run()
-    const output2 = runner.inject(call(fn2), 'result2').run()
+    const output2 = runner.map(call(fn2), 'result2').run()
 
     expect(output1.effects).toContainEqual(
       put({ type: 'SUCCESS', payload: ['result1', undefined] }),
@@ -134,15 +134,15 @@ describe('run()', () => {
   })
 })
 
-describe('inject()', () => {
-  test('injects a value', () => {
+describe('map()', () => {
+  test('maps an effect to a value', () => {
     const saga = function*() {
       const result = yield call(fn1)
       yield put({ type: 'SUCCESS', payload: result })
     }
 
     const output = createRunner(saga)
-      .inject(call(fn1), 'result')
+      .map(call(fn1), 'result')
       .run()
 
     expect(output.effects).toContainEqual(
@@ -150,7 +150,7 @@ describe('inject()', () => {
     )
   })
 
-  test('injects a thrown error', () => {
+  test('maps an effect to a throwError()', () => {
     const saga = function*() {
       try {
         const result = yield call(fn1)
@@ -161,7 +161,7 @@ describe('inject()', () => {
     }
 
     const output = createRunner(saga)
-      .inject(call(fn1), throwError(sagaError))
+      .map(call(fn1), throwError(sagaError))
       .run()
 
     expect(output.effects).toContainEqual(
@@ -169,20 +169,20 @@ describe('inject()', () => {
     )
   })
 
-  test('does not inject a thrown error without providing an error argument', () => {
+  test('does not map an effect to a throwError() without providing an error argument', () => {
     const saga = function*() {
       yield call(fn1)
     }
 
     const runSaga = () =>
       createRunner(saga)
-        .inject(call(fn1), (throwError as () => ThrowError)())
+        .map(call(fn1), (throwError as () => ThrowError)())
         .run()
 
     expect(runSaga).toThrow('Missing error argument')
   })
 
-  test('injects a finalize signal', () => {
+  test('maps an effect to a finalize()', () => {
     const saga = function*() {
       try {
         yield call(fn1)
@@ -193,13 +193,13 @@ describe('inject()', () => {
     }
 
     const output = createRunner(saga)
-      .inject(call(fn1), finalize())
+      .map(call(fn1), finalize())
       .run()
 
     expect(output.effects).toEqual([call(fn1), put({ type: 'END' })])
   })
 
-  test('injects values for a same effect', () => {
+  test('maps an effect to several values', () => {
     const saga = function*() {
       const result1 = yield call(fn1)
       const result2 = yield call(fn1)
@@ -208,7 +208,7 @@ describe('inject()', () => {
     }
 
     const output = createRunner(saga)
-      .inject(call(fn1), 'result1', 'result2', 'result3')
+      .map(call(fn1), 'result1', 'result2', 'result3')
       .run()
 
     expect(output.effects).toContainEqual(
@@ -216,7 +216,7 @@ describe('inject()', () => {
     )
   })
 
-  test('injects values for different effects', () => {
+  test('maps several effects to several values', () => {
     const saga = function*() {
       const result1 = yield call(fn1)
       const result2 = yield call(fn2)
@@ -225,9 +225,9 @@ describe('inject()', () => {
     }
 
     const output = createRunner(saga)
-      .inject(call(fn1), 'result1')
-      .inject(call(fn2), 'result2')
-      .inject(call(fn3), 'result3')
+      .map(call(fn1), 'result1')
+      .map(call(fn2), 'result2')
+      .map(call(fn3), 'result3')
       .run()
 
     expect(output.effects).toContainEqual(
@@ -235,14 +235,14 @@ describe('inject()', () => {
     )
   })
 
-  test('injects a "null" value', () => {
+  test('maps an effect to a "null" value', () => {
     const saga = function*() {
       const result1 = yield call(fn1)
       yield put({ type: 'SUCCESS', payload: result1 })
     }
 
     const output = createRunner(saga)
-      .inject(call(fn1), null)
+      .map(call(fn1), null)
       .run()
 
     expect(output.effects).toContainEqual(
@@ -250,20 +250,20 @@ describe('inject()', () => {
     )
   })
 
-  test('does not inject a value for an effect that is not yielded', () => {
+  test('does not map an unyielded effect to a value', () => {
     const saga = function*() {
       yield put({ type: 'SUCCESS' })
     }
 
     const runSaga = () =>
       createRunner(saga)
-        .inject(call(fn1), 'result')
+        .map(call(fn1), 'result')
         .run()
 
-    expect(runSaga).toThrow('Unused injection values')
+    expect(runSaga).toThrow('Unused mapped values')
   })
 
-  test('does not inject values several times for a same effect', () => {
+  test('does not map an effect several times', () => {
     const saga = function*() {
       const result = call(fn1)
       yield put({ type: 'SUCCESS', payload: result })
@@ -271,14 +271,14 @@ describe('inject()', () => {
 
     const runSaga = () =>
       createRunner(saga)
-        .inject(call(fn1), 'result1')
-        .inject(call(fn1), 'result2')
+        .map(call(fn1), 'result1')
+        .map(call(fn1), 'result2')
         .run()
 
-    expect(runSaga).toThrow('Injected values already provided for this effect')
+    expect(runSaga).toThrow('Mapped values already provided for this effect')
   })
 
-  test('does not inject too many values for a same effect', () => {
+  test('does not map an effect to too many values', () => {
     const saga = function*() {
       const result = yield call(fn1)
       yield put({ type: 'SUCCESS', payload: result })
@@ -286,13 +286,13 @@ describe('inject()', () => {
 
     const runSaga = () =>
       createRunner(saga)
-        .inject(call(fn1), 'result', 'unused result')
+        .map(call(fn1), 'result', 'unused result')
         .run()
 
-    expect(runSaga).toThrow('Unused injection values')
+    expect(runSaga).toThrow('Unused mapped values')
   })
 
-  test('does not inject without providing a value to use', () => {
+  test('does not map an effect without providing a value', () => {
     const saga = function*() {
       const result = yield call(fn1)
       yield put({ type: 'SUCCESS', payload: result })
@@ -300,24 +300,22 @@ describe('inject()', () => {
 
     const runSaga = () =>
       (createRunner(saga) as SagaRunner & {
-        inject: (effect: Effect) => SagaRunner
+        map: (effect: Effect) => SagaRunner
       })
-        .inject(call(fn1))
+        .map(call(fn1))
         .run()
 
-    expect(runSaga).toThrow('The value to inject is missing')
+    expect(runSaga).toThrow('The value to map is missing')
   })
 
-  test('does not inject without providing an effect to match', () => {
+  test('does not map an effect without providing an effect as an argument', () => {
     const saga = function*() {
       const result = call(fn1)
       yield put({ type: 'SUCCESS', payload: result })
     }
 
     const runSaga = () =>
-      (createRunner(saga) as SagaRunner & { inject: () => SagaRunner })
-        .inject()
-        .run()
+      (createRunner(saga) as SagaRunner & { map: () => SagaRunner }).map().run()
 
     expect(runSaga).toThrow('Missing effect argument')
   })
@@ -632,12 +630,12 @@ describe('clone()', () => {
     const runner1 = runner.clone()
     const runner2 = runner.clone()
 
-    runner1.inject(call(fn1), 'result1')
+    runner1.map(call(fn1), 'result1')
     runner1.should.yield(fork(fn1))
     runner1.should.not.yield(fork(fn2))
     runner1.should.not.yield(fork(fn3))
 
-    runner2.inject(call(fn2), 'result2')
+    runner2.map(call(fn2), 'result2')
 
     const runner3 = runner2.clone()
 
@@ -645,7 +643,7 @@ describe('clone()', () => {
     runner2.should.yield(fork(fn2))
     runner2.should.not.yield(fork(fn3))
 
-    runner3.inject(call(fn3), 'result3')
+    runner3.map(call(fn3), 'result3')
     runner3.should.not.yield(fork(fn1))
     runner3.should.yield(fork(fn2))
     runner3.should.yield(fork(fn3))

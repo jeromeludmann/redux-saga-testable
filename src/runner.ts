@@ -22,8 +22,8 @@ export const _createRunner = (state: SagaRunnerState): SagaRunner => {
   const isNegated = () => negated
   const runner: any = {}
 
-  runner.inject = _inject(runner, state)
-  runner.mock = runner.inject // alias: could be removed later
+  runner.map = _map(runner, state)
+  runner.mock = runner.map // alias: could be removed later
   runner.catch = _catch(runner, state)
   runner.clone = _clone(state)
   runner.run = _run(runner, state)
@@ -48,37 +48,35 @@ export const _createRunner = (state: SagaRunnerState): SagaRunner => {
   return runner
 }
 
-export const _inject = (runner: SagaRunner, state: SagaRunnerState) => (
+export const _map = (runner: SagaRunner, state: SagaRunnerState) => (
   effect: Effect,
   ...values: any[]
 ): SagaRunner => {
   if (!effect) {
-    throw createError('Missing effect argument', runner.inject)
+    throw createError('Missing effect argument', runner.map)
   }
 
   if (values.length === 0) {
     throw createError(
-      `The value to inject is missing\n\nGiven effect:\n\n${stringify(effect)}`,
-      runner.inject,
+      `The value to map is missing\n\nGiven effect:\n\n${stringify(effect)}`,
+      runner.map,
     )
   }
 
-  const effectHasAlreadyInjectedValues = state.injections.find(injection =>
-    isDeepStrictEqual(injection.effect, effect),
+  const existingMapping = state.environment.find(mapping =>
+    isDeepStrictEqual(mapping.effect, effect),
   )
 
-  if (effectHasAlreadyInjectedValues) {
+  if (existingMapping) {
     throw createError(
-      'Injected values already provided for this effect\n\n' +
+      'Mapped values already provided for this effect\n\n' +
         `Given effect:\n\n${stringify(effect)}\n\n` +
-        `Existing injected values:\n\n${stringify(
-          effectHasAlreadyInjectedValues.values,
-        )}`,
-      runner.inject,
+        `Existing mapped values:\n\n${stringify(existingMapping.values)}`,
+      runner.map,
     )
   }
 
-  state.injections.push({ effect, values })
+  state.environment.push({ effect, values })
 
   resetOutputCache(state)
   return runner
@@ -204,7 +202,7 @@ export const _throw = (
 export const _clone = (state: SagaRunnerState) => (): SagaRunner => {
   return _createRunner({
     ...state,
-    injections: [...state.injections],
+    environment: [...state.environment],
   })
 }
 
@@ -223,10 +221,10 @@ export const _run = (
   let sagaStep: IteratorResult<any>
   let nextValue = undefined
 
-  // prevents from mutating value injections
-  const injections = state.injections.map(injection => ({
-    ...injection,
-    values: Array.from(injection.values),
+  // prevents mapping mutation
+  const environment = state.environment.map(mapping => ({
+    ...mapping,
+    values: Array.from(mapping.values),
   }))
 
   for (;;) {
@@ -256,22 +254,20 @@ export const _run = (
 
     state.output.effects.push(sagaStep.value)
 
-    // injects value to the next iteration
-    const injection = injections.find(injection =>
-      isDeepStrictEqual(injection.effect, sagaStep.value),
+    // injects the mapped value to the next iteration
+    const mapping = environment.find(mapping =>
+      isDeepStrictEqual(mapping.effect, sagaStep.value),
     )
-    nextValue = injection ? injection.values.shift() : undefined
+    nextValue = mapping ? mapping.values.shift() : undefined
   }
 
-  // checks for unused data injections
-  const unusedInjection = injections.find(
-    injection => injection.values.length > 0,
-  )
-  if (unusedInjection) {
+  // checks for unused mapped values
+  const unusedMapping = environment.find(mapping => mapping.values.length > 0)
+  if (unusedMapping) {
     throw createError(
-      'Unused injection values\n\n' +
-        `Given effect:\n\n${stringify(unusedInjection.effect)}\n\n` +
-        `Unused injection values:\n\n${stringify(unusedInjection.values)}`,
+      'Unused mapped values\n\n' +
+        `Given effect:\n\n${stringify(unusedMapping.effect)}\n\n` +
+        `Unused mapped values:\n\n${stringify(unusedMapping.values)}`,
       stackFunction || runner.run,
     )
   }
