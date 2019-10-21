@@ -1,5 +1,11 @@
 import { IO } from '@redux-saga/symbols'
-import { THROW_ERROR, FINALIZE, ErrorPattern, SagaOutput } from './types/runner'
+import {
+  THROW_ERROR,
+  FINALIZE,
+  ErrorPattern,
+  SagaOutput,
+  SagaRunnerState,
+} from './types/runner'
 
 export function next<T>(iterator: Iterator<T>, value: any): IteratorResult<T> {
   if (value !== null && typeof value === 'object') {
@@ -59,4 +65,10 @@ export function createError(message: string, stack?: Function): Error {
   }
 
   return error
+}
+
+export function resetOutputCache(state: SagaRunnerState): void {
+  if (state.output !== undefined) {
+    delete state.output
+  }
 }
