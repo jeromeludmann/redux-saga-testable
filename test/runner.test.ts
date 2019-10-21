@@ -418,19 +418,6 @@ describe('catch()', () => {
     expect(runSaga).toThrow(sagaError.message)
   })
 
-  test('does not catch an error that is not thrown by the saga', () => {
-    const saga = function*() {
-      yield put({ type: 'SUCCESS' })
-    }
-
-    const runSaga = () =>
-      createRunner(saga)
-        .catch(Error)
-        .run()
-
-    expect(runSaga).toThrow('No error thrown by the saga')
-  })
-
   test('does not catch a thrown object that does not have "message" property', () => {
     const saga = function*() {
       yield call(fn1)
@@ -473,6 +460,19 @@ describe('catch()', () => {
 
     expect(runSaga).toThrow('Missing error pattern argument')
   })
+
+  test('does not catch an error that is not thrown', () => {
+    const saga = function*() {
+      yield call(fn1)
+    }
+
+    const runSaga = () =>
+      createRunner(saga)
+        .catch(Error)
+        .run()
+
+    expect(runSaga).toThrow('No error thrown by the saga')
+  })
 })
 
 describe('should.yield()', () => {
@@ -481,22 +481,15 @@ describe('should.yield()', () => {
   }
 
   test('asserts that the saga yields an effect', () => {
-    createRunner(saga)
-      .should.yield(put({ type: 'SUCCESS', payload: 'result' }))
-      .run()
+    createRunner(saga).should.yield(put({ type: 'SUCCESS', payload: 'result' }))
   })
 
   test('asserts that the saga does not yield an effect', () => {
-    createRunner(saga)
-      .should.not.yield(call(fn1))
-      .run()
+    createRunner(saga).should.not.yield(call(fn1))
   })
 
   test('does not assert that the saga yields an effect', () => {
-    const runSaga = () =>
-      createRunner(saga)
-        .should.yield(call(fn1))
-        .run()
+    const runSaga = () => createRunner(saga).should.yield(call(fn1))
 
     expect(runSaga).toThrow('Assertion failure')
   })
@@ -508,22 +501,15 @@ describe('should.return()', () => {
   }
 
   test('asserts that the saga returns a value', () => {
-    createRunner(saga)
-      .should.return('result1')
-      .run()
+    createRunner(saga).should.return('result1')
   })
 
   test('asserts that the saga does not return a value', () => {
-    createRunner(saga)
-      .should.not.return('result2')
-      .run()
+    createRunner(saga).should.not.return('result2')
   })
 
   test('does not assert that the saga returns a value', () => {
-    const runSaga = () =>
-      createRunner(saga)
-        .should.return('result2')
-        .run()
+    const runSaga = () => createRunner(saga).should.return('result2')
 
     expect(runSaga).toThrow('Assertion failure')
   })
@@ -535,24 +521,33 @@ describe('should.throw()', () => {
     throw sagaError
   }
 
-  test('asserts that the saga throwns an error', () => {
+  test('asserts that the saga throws an error', () => {
     createRunner(saga)
+      .catch(Error)
       .should.throw(sagaError.message)
-      .run()
   })
 
   test('asserts that the saga does not throw an error', () => {
     createRunner(saga)
-      .should.not.throw('unthrown')
       .catch(sagaError.message)
-      .run()
+      .should.not.throw('unthrown')
   })
 
-  test('does not assert that the saga throwns an error', () => {
+  test('does not assert that the saga throws an error', () => {
     const runSaga = () =>
       createRunner(saga)
+        .catch(sagaError.message)
         .should.throw('unthrown')
-        .run()
+
+    expect(runSaga).toThrow('Assertion failure')
+  })
+
+  test('does not assert that the saga throws an error that is not thrown', () => {
+    const saga = function*() {
+      yield put({ type: 'SUCCESS' })
+    }
+
+    const runSaga = () => createRunner(saga).should.throw(Error)
 
     expect(runSaga).toThrow('Assertion failure')
   })

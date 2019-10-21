@@ -89,8 +89,7 @@ export interface Finalize {
 
 export interface SagaRunnerState {
   injections: Injection[]
-  assertions: Array<(output: SagaOutput) => void>
-  errorPattern?: ErrorPattern
+  catchingError?: ErrorPattern
 }
 
 export interface Injection {
