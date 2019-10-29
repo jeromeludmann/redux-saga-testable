@@ -19,7 +19,7 @@ export interface SagaRunner {
   should: SagaAssertions
 
   /**
-   * Catches silently an error thrown by the saga (alias of `should.throw()`).
+   * Catches silently an error thrown by the saga.
    */
   catch(error: ErrorPattern): SagaRunner
 
