@@ -1,9 +1,9 @@
 {
   "name": "redux-saga-testable",
-  "version": "0.2.2",
+  "version": "0.3.0-alpha.2",
   "description": "Practical unit test library for redux-saga",
-  "main": "lib/runner.js",
-  "types": "lib/runner.d.ts",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
   "files": [
     "/lib"
   ],
@@ -35,15 +35,16 @@
   },
   "dependencies": {},
   "devDependencies": {
+    "@redux-saga/testing-utils": "^1.1.1",
     "@types/jest": "^24.0.11",
     "@types/node": "^11.13.4",
     "coveralls": "^3.0.3",
     "jest": "^24.7.1",
-    "redux-saga": "^1.0.2",
+    "redux-saga": "^1.1.1",
     "ts-jest": "^24.0.2",
-    "typescript": "^3.4.3"
+    "typescript": "^3.6.4"
   },
   "peerDependencies": {
-    "redux-saga": "1.0.x"
+    "redux-saga": "^1.0.0"
   }
 }

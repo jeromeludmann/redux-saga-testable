@@ -1,92 +1,45 @@
 import { isDeepStrictEqual } from 'util'
-import { Effect, Saga } from '@redux-saga/types'
-import { IO } from '@redux-saga/symbols'
+import { Effect } from '@redux-saga/types'
 import { stringify } from './stringify'
+import { getExtendedSagaAssertions } from './aliases'
+import {
+  createError,
+  matchError,
+  next,
+  isEffect,
+  createAssert,
+  resetOutputCache,
+} from './utils'
+import {
+  SagaRunner,
+  SagaRunnerState,
+  ErrorPattern,
+  SagaOutput,
+} from './types/runner'
 
-export interface SagaRunner {
-  /**
-   * Mocks the result of an effect.
-   */
-  mock(effect: Effect, result: any, ...nextResults: any[]): SagaRunner
-
-  should: {
-    /**
-     * Asserts that the saga yields an effect.
-     */
-    yield(effect: Effect): SagaRunner
-
-    /**
-     * Asserts that the saga returns a value.
-     */
-    return(value: any): SagaRunner
-
-    /**
-     * Asserts that the saga throws an error.
-     */
-    throw(error: ErrorPattern): SagaRunner
-
-    /**
-     * Negates the next assertion.
-     */
-    not: Pick<SagaRunner['should'], Exclude<keyof SagaRunner['should'], 'not'>>
-  }
-
-  /**
-   * Catches an error thrown by the saga (alias of `should.throw()`).
-   */
-  catch(error: ErrorPattern): SagaRunner
-
-  /**
-   * Runs the saga.
-   */
-  run(): SagaOutput
-}
-
-export interface SagaOutput {
-  effects: Effect[]
-  return?: any
-  error?: Error
-}
-
-export type ErrorPattern =
-  | string
-  | RegExp
-  | Error
-  | { new (...args: any[]): any }
-
-/**
- * Creates a saga runner.
- */
-export function use<Saga extends (...args: any[]) => any>(
-  saga: Saga,
-  ...args: Parameters<Saga>
-): SagaRunner {
-  if (!saga) {
-    throw failure('Missing saga argument', use)
-  }
-
-  const mocks: Mock[] = []
-  const throwable: Throwable = {}
-  const assertions: Assertion[] = []
-  const runner: any = {}
-
-  runner.mock = _mock.bind(runner, mocks)
-  runner.catch = (pattern: ErrorPattern) => runner.should.throw(pattern)
-  runner.run = _run.bind(null, { mocks, throwable, assertions }, saga, args)
-
+export const _createRunner = (state: SagaRunnerState): SagaRunner => {
   let negated = false
   const isNegated = () => negated
+  const runner: any = {}
 
+  runner.map = _map(runner, state)
+  runner.mock = runner.map // alias: could be removed later
+  runner.catch = _catch(runner, state)
+  runner.clone = _clone(state)
+  runner.run = _run(runner, state)
+
+  // creates the assertions interface
   runner.should = {
-    yield: _yield.bind(runner, assertions, isNegated),
-    return: _return.bind(runner, assertions, isNegated),
-    throw: _throw.bind(runner, assertions, throwable, isNegated),
+    yield: _yield(runner, state, isNegated),
+    return: _return(runner, state, isNegated),
+    throw: _throw(runner, state, isNegated),
+    ...getExtendedSagaAssertions(runner, state, isNegated, _yield),
   }
 
-  // add "not" feature to "should" interface
+  // negates the next assertion
   runner.should.not = runner.should
   runner.should = new Proxy(runner.should, {
-    get(target: any, key) {
+    get(target: any, key: string) {
       negated = key === 'not'
       return target[key]
     },
@@ -95,293 +48,248 @@ export function use<Saga extends (...args: any[]) => any>(
   return runner
 }
 
-const THROW_ERROR = '@@redux-saga-testable/THROW_ERROR'
-
-export interface ThrowError {
-  [THROW_ERROR]: boolean
-  error: Error
-}
-
-/**
- * Throws an error when used as a mock result.
- */
-export function throwError(error: Error): ThrowError {
-  return { [THROW_ERROR]: true, error }
-}
-
-const FINALIZE = '@@redux-saga-testable/FINALIZE'
-
-export interface Finalize {
-  [FINALIZE]: boolean
-}
-
-/**
- * Finalizes the saga when used as a mock result.
- */
-export function finalize(): Finalize {
-  return { [FINALIZE]: true }
-}
-
-interface Mock {
-  effect: Effect
-  results: any[]
-}
-
-function _mock(
-  this: SagaRunner,
-  mocks: Mock[],
+export const _map = (runner: SagaRunner, state: SagaRunnerState) => (
   effect: Effect,
-  ...results: any[]
-) {
+  ...values: any[]
+): SagaRunner => {
   if (!effect) {
-    throw failure('Missing effect argument', _mock)
+    throw createError('Missing effect argument', runner.map)
   }
 
-  if (results.length === 0) {
-    throw failure(
-      'Missing mock result argument\n\n' +
-        `Given effect:\n\n${stringify(effect)}`,
-      _mock,
+  if (values.length === 0) {
+    throw createError(
+      `The value to map is missing\n\nGiven effect:\n\n${stringify(effect)}`,
+      runner.map,
     )
   }
 
-  const mockAlreadyProvided = mocks.find(mock =>
-    isDeepStrictEqual(mock.effect, effect),
+  const existingMapping = state.environment.find(mapping =>
+    isDeepStrictEqual(mapping.effect, effect),
   )
 
-  if (mockAlreadyProvided) {
-    throw failure(
-      'Mock results already provided\n\n' +
+  if (existingMapping) {
+    throw createError(
+      'Mapped values already provided for this effect\n\n' +
         `Given effect:\n\n${stringify(effect)}\n\n` +
-        `Existing mock results:\n\n${stringify(mockAlreadyProvided.results)}`,
-      _mock,
+        `Existing mapped values:\n\n${stringify(existingMapping.values)}`,
+      runner.map,
     )
   }
 
-  mocks.push({ effect, results })
-  return this
+  state.environment.push({ effect, values })
+
+  resetOutputCache(state)
+  return runner
 }
 
-type Assertion = (output: SagaOutput) => void
-
-function _yield(
-  this: SagaRunner,
-  assertions: Assertion[],
-  isNegated: () => boolean,
-  effect: Effect,
-) {
-  const assert = createAssert(isNegated())
-
-  assertions.push(output => {
-    if (!assert(output.effects.some(e => isDeepStrictEqual(e, effect)))) {
-      throw failure(
-        'Assertion failure\n\n' +
-          `Expected effect:\n\n${stringify(effect)}\n\n` +
-          `Received effects:\n\n${stringify(output.effects)}`,
-        _run,
-      )
-    }
-  })
-
-  return this
-}
-
-function _return(
-  this: SagaRunner,
-  assertions: Assertion[],
-  isNegated: () => boolean,
-  value: any,
-) {
-  const assert = createAssert(isNegated())
-
-  assertions.push(output => {
-    if (!assert(isDeepStrictEqual(output.return, value))) {
-      throw failure(
-        'Assertion failure\n\n' +
-          `Expected return value:\n\n${stringify(value)}\n\n` +
-          `Received return value:\n\n${stringify(output.return)}`,
-        _run,
-      )
-    }
-  })
-
-  return this
-}
-
-interface Throwable {
-  pattern?: ErrorPattern
-}
-
-function _throw(
-  this: SagaRunner,
-  assertions: Assertion[],
-  throwable: Throwable,
-  isNegated: () => boolean,
+export const _catch = (runner: SagaRunner, state: SagaRunnerState) => (
   pattern: ErrorPattern,
-) {
+) => {
   if (!pattern) {
-    throw failure('Missing error pattern argument', _throw)
+    throw createError('Missing error pattern argument', runner.catch)
   }
 
-  const negated = isNegated()
-  const assert = createAssert(negated)
+  if (state.catchingError) {
+    throw createError(
+      'Error pattern already provided\n\n' +
+        `Given error pattern:\n\n${stringify(state.catchingError)}`,
+      runner.catch,
+    )
+  }
 
-  assertions.push(output => {
-    if (!output.error) {
-      throw failure(
-        'No error thrown by the saga\n\n' +
-          `Given error pattern:\n\n${stringify(throwable.pattern)}`,
-        _run,
-      )
-    }
+  state.catchingError = pattern
 
-    if (!assert(matchError(output.error, pattern))) {
-      throw failure(
-        'Assertion failure\n\n' +
-          `Expected error pattern:\n\n${stringify(pattern)}\n\n` +
-          `Received thrown error:\n\n${stringify(output.error)}`,
-        _run,
-      )
-    }
+  resetOutputCache(state)
+  return runner
+}
+
+export const _yield = (
+  runner: SagaRunner,
+  state: SagaRunnerState,
+  isNegated: () => boolean,
+  stackFunction?: Function,
+) => (effect: Effect): SagaRunner => {
+  if (!effect) {
+    throw createError(
+      'Missing effect argument',
+      stackFunction || runner.should.yield,
+    )
+  }
+
+  const output = _run(runner, state, stackFunction)()
+
+  const assert = createAssert(
+    output => output.effects.some(e => isDeepStrictEqual(e, effect)),
+    isNegated(),
+  )
+
+  if (!assert(output)) {
+    throw createError(
+      'Assertion failure\n\n' +
+        `Expected effect:\n\n${stringify(effect)}\n\n` +
+        `Received effects:\n\n${stringify(output.effects)}`,
+      stackFunction || runner.should.yield,
+    )
+  }
+
+  return runner
+}
+
+export const _return = (
+  runner: SagaRunner,
+  state: SagaRunnerState,
+  isNegated: () => boolean,
+  stackFunction?: Function,
+) => (value: any): SagaRunner => {
+  if (!value) {
+    throw createError(
+      'Missing return value argument',
+      stackFunction || runner.should.return,
+    )
+  }
+
+  const output = _run(runner, state, stackFunction)()
+
+  const assert = createAssert(
+    output => isDeepStrictEqual(output.return, value),
+    isNegated(),
+  )
+
+  if (!assert(output)) {
+    throw createError(
+      'Assertion failure\n\n' +
+        `Expected return value:\n\n${stringify(value)}\n\n` +
+        `Received return value:\n\n${stringify(output.return)}`,
+      stackFunction || runner.should.return,
+    )
+  }
+
+  return runner
+}
+
+export const _throw = (
+  runner: SagaRunner,
+  state: SagaRunnerState,
+  isNegated: () => boolean,
+  stackFunction?: Function,
+) => (pattern: ErrorPattern): SagaRunner => {
+  if (!pattern) {
+    throw createError(
+      'Missing error pattern argument',
+      stackFunction || runner.should.throw,
+    )
+  }
+
+  const output = _run(runner, state, stackFunction)()
+
+  const assert = createAssert(
+    output => !!output.error && matchError(output.error, pattern),
+    isNegated(),
+  )
+
+  if (!assert(output)) {
+    throw createError(
+      'Assertion failure\n\n' +
+        `Expected error pattern:\n\n${stringify(pattern)}\n\n` +
+        `Received thrown error:\n\n${stringify(output.error)}`,
+      stackFunction || runner.should.throw,
+    )
+  }
+
+  return runner
+}
+
+export const _clone = (state: SagaRunnerState) => (): SagaRunner => {
+  return _createRunner({
+    ...state,
+    environment: [...state.environment],
   })
+}
 
-  if (!negated) {
-    if (throwable.pattern) {
-      throw failure(
-        'Error pattern already provided\n\n' +
-          `Given error pattern:\n\n${stringify(throwable.pattern)}`,
-        _throw,
-      )
-    }
-
-    throwable.pattern = pattern
+export const _run = (
+  runner: SagaRunner,
+  state: SagaRunnerState,
+  stackFunction?: Function,
+) => (): SagaOutput => {
+  if (state.output !== undefined) {
+    return state.output
   }
 
-  return this
-}
+  state.output = { effects: [] }
 
-function createAssert(negated: boolean) {
-  return (condition: boolean) => (negated ? !condition : condition)
-}
+  const iterator = state.saga(...state.arguments)
+  let sagaStep: IteratorResult<any>
+  let nextValue = undefined
 
-function _run(
-  state: { mocks: Mock[]; throwable: Throwable; assertions: Assertion[] },
-  saga: Saga,
-  args: any[],
-) {
-  const output: SagaOutput = { effects: [] }
-  const iterator = saga(...args)
-  let result, nextValue
-
-  const mocks = state.mocks.map(mock => ({
-    ...mock,
-    results: Array.from(mock.results),
+  // prevents mapping mutation
+  const environment = state.environment.map(mapping => ({
+    ...mapping,
+    values: Array.from(mapping.values),
   }))
 
   for (;;) {
     try {
-      result = next(iterator, nextValue)
-    } catch (error) {
-      if (!state.throwable.pattern) throw error
-      output.error = error
+      sagaStep = next(iterator, nextValue)
+    } catch (sagaError) {
+      state.output.error = sagaError
       break
     }
 
-    if (result.done) {
-      output.return = result.value
+    if (sagaStep.done) {
+      state.output.return = sagaStep.value
       break
     }
 
-    if (!isEffect(result.value)) {
-      nextValue = result.value
+    if (!isEffect(sagaStep.value)) {
+      nextValue = sagaStep.value
       continue
     }
 
-    if (output.effects.length > 100) {
-      throw failure('Maximum yielded effects size reached', _run)
+    if (state.output.effects.length > 100) {
+      throw createError(
+        'Maximum yielded effects size reached',
+        stackFunction || runner.run,
+      )
     }
 
-    output.effects.push(result.value)
-    nextValue = extractMockResult(mocks, result.value)
+    state.output.effects.push(sagaStep.value)
+
+    // injects the mapped value to the next iteration
+    const mapping = environment.find(mapping =>
+      isDeepStrictEqual(mapping.effect, sagaStep.value),
+    )
+    nextValue = mapping ? mapping.values.shift() : undefined
   }
 
-  checkMocks(mocks, _run)
-  checkAssertions(state.assertions, output)
-
-  return output
-}
-
-function next(iterator: IterableIterator<any>, value: any) {
-  if (value !== null && typeof value === 'object') {
-    if (THROW_ERROR in value) return iterator.throw!(value.error)
-    if (FINALIZE in value) return iterator.return!()
-  }
-
-  return iterator.next(value)
-}
-
-function isEffect(obj: Object) {
-  return obj !== null && typeof obj === 'object' && IO in obj
-}
-
-function extractMockResult(mocks: Mock[], effect: Effect) {
-  const mock = mocks.find(mock => isDeepStrictEqual(mock.effect, effect))
-  return mock ? mock.results.shift() : undefined
-}
-
-function checkMocks(mocks: Mock[], ssf: Function) {
-  const unusedMock = mocks.find(mock => mock.results.length > 0)
-
-  if (unusedMock) {
-    throw failure(
-      'Unused mock results\n\n' +
-        `Given effect:\n\n${stringify(unusedMock.effect)}\n\n` +
-        `Unused mock results:\n\n${stringify(unusedMock.results)}`,
-      ssf,
+  // checks for unused mapped values
+  const unusedMapping = environment.find(mapping => mapping.values.length > 0)
+  if (unusedMapping) {
+    throw createError(
+      'Unused mapped values\n\n' +
+        `Given effect:\n\n${stringify(unusedMapping.effect)}\n\n` +
+        `Unused mapped values:\n\n${stringify(unusedMapping.values)}`,
+      stackFunction || runner.run,
     )
   }
-}
 
-function checkAssertions(assertions: Assertion[], output: SagaOutput) {
-  assertions.forEach(assertion => assertion(output))
-}
-
-function matchError(error: Error, pattern: ErrorPattern) {
-  if (typeof error !== 'object') error = { name: '', message: error }
-  if (!error.message) return false
-
-  if (typeof pattern === 'string' && error.message.includes(pattern)) {
-    return true
+  // re-throws saga error if needed
+  if (state.output.error) {
+    if (
+      !state.catchingError ||
+      !matchError(state.output.error, state.catchingError)
+    ) {
+      throw state.output.error
+    }
   }
 
-  if (pattern instanceof RegExp && pattern.test(error.message)) {
-    return true
+  // checks for unused catching error
+  else if (state.catchingError) {
+    throw createError(
+      'No error thrown by the saga\n\n' +
+        `Given error pattern:\n\n${stringify(state.catchingError)}`,
+      stackFunction || runner.run,
+    )
   }
 
-  if (
-    pattern instanceof Error &&
-    error.name === pattern.name &&
-    error.message === pattern.message
-  ) {
-    return true
-  }
-
-  if (typeof pattern === 'function' && error instanceof pattern) {
-    return true
-  }
-
-  return false
-}
-
-function failure(message: string, ssf?: Function): Error {
-  const error = new Error(message)
-
-  if (ssf) {
-    const limit = Error.stackTraceLimit
-    Error.stackTraceLimit = 1
-    Error.captureStackTrace(error, ssf)
-    Error.stackTraceLimit = limit
-  }
-
-  return error
+  return state.output
 }

@@ -1,5 +1,5 @@
 import { put, call, take } from 'redux-saga/effects'
-import { use, throwError, finalize } from '../src/runner'
+import { createRunner, throwError, finalize } from '../src'
 
 const service = {
   getUser: (id: number) => {},
@@ -20,20 +20,18 @@ test('fetchUser() should dispatch FETCH_SUCCESS', () => {
   const id = 123
   const mockUser = { user: 'name' }
 
-  use(fetchUser, id)
-    .mock(call(service.getUser, id), mockUser)
-    .should.yield(put({ type: 'FETCH_SUCCESS', payload: mockUser }))
-    .run()
+  createRunner(fetchUser, id)
+    .map(call(service.getUser, id), mockUser)
+    .should.put({ type: 'FETCH_SUCCESS', payload: mockUser })
 })
 
 test('fetchUser() should dispatch FETCH_FAILURE', () => {
   const id = 456
   const mockError = new Error('Unable to fetch user')
 
-  use(fetchUser, id)
-    .mock(call(service.getUser, id), throwError(mockError))
-    .should.yield(put({ type: 'FETCH_FAILURE', payload: mockError.message }))
-    .run()
+  createRunner(fetchUser, id)
+    .map(call(service.getUser, id), throwError(mockError))
+    .should.put({ type: 'FETCH_FAILURE', payload: mockError.message })
 })
 
 function* watchNotify() {
@@ -48,10 +46,9 @@ function* watchNotify() {
 }
 
 test('watchNotify() should dispatch NOTIFY_END', () => {
-  use(watchNotify)
-    .mock(call(service.notify), finalize())
-    .should.yield(put({ type: 'NOTIFY_END' }))
-    .run()
+  createRunner(watchNotify)
+    .map(call(service.notify), finalize())
+    .should.put({ type: 'NOTIFY_END' })
 })
 
 function* findUser(id: number) {
@@ -67,8 +64,8 @@ function* findUser(id: number) {
 test('findUser() should throw an error', () => {
   const id = 789
 
-  use(findUser, id)
-    .mock(call(service.getUser, id), undefined)
+  createRunner(findUser, id)
+    .map(call(service.getUser, id), undefined)
+    .catch(Error)
     .should.throw(/^Unable to find user/)
-    .run()
 })
