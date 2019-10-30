@@ -1,6 +1,20 @@
-## API
+# API
 
-### `createRunner(saga[, ...args])`
+- [`createRunner(saga[, ...args])`](#createrunnersaga-args)
+- [`runner.map(effect, value [, ...nextValues])`](#runnermapeffect-value--nextvalues)
+- [`runner.catch(error)`](#runnercatcherror)
+- [`runner.clone()`](#runnerclone)
+- [`runner.run()`](#runnerrun)
+- [`runner.should.yield(effect)`](#runnershouldyieldeffect)
+- [`runner.should.return(value)`](#runnershouldreturnvalue)
+- [`runner.should.throw(error)`](#runnershouldthrowerror)
+- [`throwError(error)`](#throwerrorerror)
+- [`finalize()`](#finalize)
+- [`SagaRunner`](#sagarunner)
+- [`SagaAssertions`](#sagaassertions)
+- [`SagaOutput`](#sagaoutput)
+
+## `createRunner(saga[, ...args])`
 
 Creates a [SagaRunner](#sagarunner).
 
@@ -13,7 +27,7 @@ Returns a [`SagaRunner`](#sagarunner).
 const runner = createRunner(fetchUser, 'user_id')
 ```
 
-### `runner.map(effect, value [, ...nextValues])`
+## `runner.map(effect, value [, ...nextValues])`
 
 Maps an effect to a value.
 
@@ -34,7 +48,7 @@ See also:
 - [`throwError(error)`](#throwerrorerror)
 - [`finalize()`](#finalize)
 
-### `runner.catch(error)`
+## `runner.catch(error)`
 
 Catches silently an error thrown by the saga.
 
@@ -55,7 +69,7 @@ createRunner(fetchUser, 'unknown_id')
   .run()
 ```
 
-### `runner.clone()`
+## `runner.clone()`
 
 Clones the current runner instance.
 
@@ -78,7 +92,7 @@ runner2.should.put({
 })
 ```
 
-### `runner.run()`
+## `runner.run()`
 
 Runs the saga.
 
@@ -114,7 +128,7 @@ createRunner(fetchUser, 'user_id').should.put({
 })
 ```
 
-### `runner.should.return(value)`
+## `runner.should.return(value)`
 
 Asserts that the saga returns a value.
 
@@ -126,7 +140,7 @@ Returns the current [`SagaRunner`](#sagarunner).
 createRunner(fetchUser, 'user_id').should.return({ name: 'mock name' })
 ```
 
-### `runner.should.throw(error)`
+## `runner.should.throw(error)`
 
 Asserts that the saga throws an error.
 
@@ -147,7 +161,7 @@ createRunner(fetchUser, 'unknown_id')
   .should.throw(/User not found/)
 ```
 
-### `throwError(error)`
+## `throwError(error)`
 
 Throws an error from the saga when mapped as a value.
 
@@ -161,7 +175,7 @@ createRunner(fetchUser)
   .run()
 ```
 
-### `finalize()`
+## `finalize()`
 
 Finalizes the saga when mapped as a value.
 
@@ -173,7 +187,7 @@ createRunner(fetchUser)
   .run()
 ```
 
-### `SagaRunner`
+## `SagaRunner`
 
 The saga runner object returned by [`createRunner()`](#createrunnersaga-args).
 
@@ -183,7 +197,7 @@ The saga runner object returned by [`createRunner()`](#createrunnersaga-args).
 - [`run: Function`](#runnerrun)
 - [`should: SagaAssertions`](#sagaassertions)
 
-### `SagaAssertions`
+## `SagaAssertions`
 
 The saga assertions object exposed by `runner.should`.
 
@@ -191,7 +205,7 @@ The saga assertions object exposed by `runner.should`.
 - [`return: Function`](#runnershouldreturnvalue)
 - [`throw: Function`](#runnershouldthrowerror)
 
-### `SagaOutput`
+## `SagaOutput`
 
 The saga output object returned by [`runner.run()`](#runnerrun).
 
