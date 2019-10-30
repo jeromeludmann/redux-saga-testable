@@ -16,7 +16,7 @@ Practical unit test library for [`redux-saga`](https://github.com/redux-saga/red
 ## Table of contents
 
 - [Why](#why)
-- [Installation](#installation)
+- [Installation](/docs/install.md)
 - [Usage](/docs/usage.md)
 - [API](/docs/api.md)
 - [License](#license)
@@ -32,24 +32,6 @@ When testing a saga, we should not have to worry about what the generator functi
 [`redux-saga-testable`](https://github.com/jeromeludmann/redux-saga-testable) tries to make it easier.
 
 Inspired by [`redux-saga-test-plan`](https://github.com/jfairbank/redux-saga-test-plan) and [`redux-saga-test-engine`](https://github.com/timbuckley/redux-saga-test-engine).
-
-## Installation
-
-Make sure you have [Node.js](https://nodejs.org) installed.
-
-Then install:
-
-```sh
-npm install --save-dev redux-saga-testable
-```
-
-or
-
-```sh
-yarn add -D redux-saga-testable
-```
-
-_Since it will only be used during the development stage, you should install it as a development dependency._
 
 ## License
 
