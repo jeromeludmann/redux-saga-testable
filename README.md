@@ -13,13 +13,17 @@ Practical unit test library for [`redux-saga`](https://github.com/redux-saga/red
 - Built-in assertions
 - TypeScript support
 
-## Table of contents
+## Resources
 
 - [About](/docs/about.md)
 - [Installation](/docs/install.md)
-- [Usage](/docs/usage.md)
-- [API](/docs/api.md)
+- [Advanced usage](/docs/usage.md)
+- [API documentation](/docs/api.md)
 - [License](#license)
+
+## Basic usage
+
+WIP
 
 ## License
 
