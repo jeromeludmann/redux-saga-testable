@@ -538,17 +538,20 @@ describe('should.return()', () => {
     expect(runSaga).toThrow('Assertion failure')
   })
 
-  test('does not assert that the saga returns a value without providing a return value argument', () => {
+  test('does accept "0" as an argument', () => {
     const saga = function*() {
-      return 'result'
+      return 0
     }
 
-    const runSaga = () =>
-      (createRunner(saga) as SagaRunner & {
-        should: { return: () => SagaRunner }
-      }).should.return()
+    createRunner(saga).should.return(0)
+  })
 
-    expect(runSaga).toThrow('Missing return value argument')
+  test('does accept "undefined" as an argument', () => {
+    const saga = function*() {
+      return
+    }
+
+    createRunner(saga).should.return(undefined)
   })
 })
 

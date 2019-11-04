@@ -141,13 +141,6 @@ export const _return = (
   isNegated: () => boolean,
   stackFunction?: Function,
 ) => (value: any): SagaRunner => {
-  if (!value) {
-    throw createError(
-      'Missing return value argument',
-      stackFunction || runner.should.return,
-    )
-  }
-
   const output = _run(runner, state, stackFunction)()
 
   const assert = createAssert(
