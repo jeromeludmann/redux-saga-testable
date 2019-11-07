@@ -25,9 +25,9 @@ import {
   retry,
   all,
   race,
-} from 'redux-saga/effects'
-import { Effect } from '@redux-saga/types'
-import { SagaRunner, SagaRunnerState } from './types/runner'
+} from 'redux-saga/effects';
+import { Effect } from '@redux-saga/types';
+import { SagaRunner, SagaRunnerState } from './types/runner';
 
 export const getExtendedSagaAssertions = (
   runner: SagaRunner,
@@ -42,9 +42,9 @@ export const getExtendedSagaAssertions = (
 ) => {
   const createAlias = (effectCreator: (...effectArgs: any[]) => Effect) => {
     const fn = (...effectArgs: any[]) =>
-      _yield(runner, state, isNegated, fn)(effectCreator(...effectArgs))
-    return fn
-  }
+      _yield(runner, state, isNegated, fn)(effectCreator(...effectArgs));
+    return fn;
+  };
 
   return {
     take: createAlias(take),
@@ -73,5 +73,5 @@ export const getExtendedSagaAssertions = (
     retry: createAlias(retry),
     all: createAlias(all),
     race: createAlias(race),
-  }
-}
+  };
+};

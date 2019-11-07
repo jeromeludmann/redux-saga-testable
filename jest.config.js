@@ -7,4 +7,4 @@ module.exports = {
   coverageReporters: ['text', 'html', 'lcov'],
   coverageThreshold: { global: { statements: 100, branches: 100 } },
   collectCoverageFrom: ['src/**/*.ts'],
-}
+};
