@@ -4,476 +4,142 @@
 [![npm](https://img.shields.io/npm/dt/redux-saga-testable)](https://www.npmjs.com/package/redux-saga-testable)
 [![Travis (.org)](https://img.shields.io/travis/jeromeludmann/redux-saga-testable)](https://travis-ci.org/jeromeludmann/redux-saga-testable)
 [![Coveralls github](https://img.shields.io/coveralls/github/jeromeludmann/redux-saga-testable)](https://coveralls.io/github/jeromeludmann/redux-saga-testable)
-[![NPM](https://img.shields.io/npm/l/redux-saga-testable)](LICENSE)
+[![NPM](https://img.shields.io/npm/l/redux-saga-testable)](/LICENSE)
 
-Practical unit test library for [`redux-saga`](https://github.com/redux-saga/redux-saga) providing features like:
+Unit test library for [redux-saga](https://github.com/redux-saga/redux-saga).
 
-- Effect recording
-- Effect-value mapping
-- Built-in assertions
-- TypeScript support
+Features:
 
-## Table of contents
+- runs sagas without iterating manually
+- allows to map effects to values
+- provides built-in effect assertions
+- supports TypeScript
 
-- [Why](#why)
-- [Installation](#installation)
-- [Usage](#usage)
-  - [Test a simple case](#test-a-simple-case)
-  - [Test an error case](#test-an-error-case)
-  - [Finalize a saga prematurely](#finalize-a-saga-prematurely)
-  - [Catch an error thrown by a saga](#catch-an-error-thrown-by-a-saga)
-  - [Clone a saga runner instance](#clone-a-saga-runner-instance)
-- [API](#api)
-  - [`createRunner(saga[, ...args])`](#createrunnersaga-args)
-  - [`runner.map(effect, value [, ...nextValues])`](#runnermapeffect-value--nextvalues)
-  - [`runner.catch(error)`](#runnercatcherror)
-  - [`runner.clone()`](#runnerclone)
-  - [`runner.run()`](#runnerrun)
-  - [`runner.should.yield(effect)`](#runnershouldyieldeffect)
-  - [`runner.should.return(value)`](#runnershouldreturnvalue)
-  - [`runner.should.throw(error)`](#runnershouldthrowerror)
-  - [`throwError(error)`](#throwerrorerror)
-  - [`finalize()`](#finalize)
-  - [`SagaRunner`](#sagarunner)
-  - [`SagaAssertions`](#sagaassertions)
-  - [`SagaOutput`](#sagaoutput)
+## Contents
+
+- [Overview](#overview)
+- [Getting started](#getting-started)
+- [Contribute](#contribute)
 - [License](#license)
 
-## Why
+## Documentation
 
-[`redux-saga`](https://github.com/redux-saga/redux-saga) is an awesome [`redux`](https://github.com/reduxjs/redux) middleware that avoids coupling between logic and side effects. It allows us to test the sagas in a pure way due to the ability of the generator functions to receive data from the outside.
+- [Tutorial][tutorial]
+- [API][api]
 
-The drawback is that we have to manually iterate over the generator function for each yielded effect. It makes the tests not very intuitive to write and noisy to read.
+## Overview
 
-When testing a saga, we should not have to worry about what the generator function does behind. We would just like to check some arbitrary effects and optionally map effects to some values instead of triggering side effects.
+It's about sagas and unit tests.
 
-[`redux-saga-testable`](https://github.com/jeromeludmann/redux-saga-testable) tries to make it easier.
+When you write unit tests of sagas, you have to manually iterate on the generator and pass your next value for each yielded effect. The number of iterations you have to `next()` depends on the number of `yield` in the saga.
 
-Inspired by [`redux-saga-test-plan`](https://github.com/jfairbank/redux-saga-test-plan) and [`redux-saga-test-engine`](https://github.com/timbuckley/redux-saga-test-engine).
+If a `yield` statement is added, removed or just swapped with another, there is a good chance that you pass your next value to an unexpected effect.
 
-## Installation
+This causes tests boring to write, not easy to understand and too prone to breaking.
 
-Make sure you have [Node.js](https://nodejs.org) installed.
+Ideally, you should not have to worry about what the saga does behind. You would just like to map some effects to some values and assert that some arbitrary effects happened, in a clear and concise way.
 
-Then install:
+If you have to deal with that, **redux-saga-testable** could make your sagas more easily testable. It runs your sagas without the need to iterate on the generator yourself, allows you to map effects to values and provides the assertions you need.
+
+## Getting started
+
+### Install
+
+Get it with npm:
 
 ```sh
-npm install --save-dev redux-saga-testable
+npm i -D redux-saga-testable
 ```
 
-or
+or yarn:
 
 ```sh
 yarn add -D redux-saga-testable
 ```
 
-_Since it will only be used during the development stage, you should install it as a development dependency._
+### Usage
 
-## Usage
-
-We will use [Jest](https://github.com/facebook/jest) for the examples below, but that does not matter because you should be able to use the test framework of your choice like [Mocha](https://github.com/mochajs/mocha), [AVA](https://github.com/avajs/ava), etc.
-
-[View API for more details](#api).
-
-Assume that we have the following saga:
+Considering the following saga:
 
 ```ts
-function* fetchUser(id: number) {
-  try {
-    yield put({ type: 'FETCH_PENDING' });
-    const user = yield call(service.getUser, id);
-    yield put({ type: 'FETCH_SUCCESS', payload: user });
-  } catch (error) {
-    yield put({ type: 'FETCH_FAILURE', payload: error.message });
+function* fetchUserWorker(action: FetchUserAction) {
+  const { userId } = action.payload;
+
+  yield put({ type: 'FETCH_USER_REQUEST' });
+
+  let user = yield select(selectors.getCurrentUser);
+  if (user === undefined) {
+    user = yield call(services.getUserById, userId);
   }
+
+  yield put({ type: 'FETCH_USER_SUCCESS', payload: user });
 }
 ```
 
-### Test a simple case
+This saga fetches a user and dispatches `FETCH_USER_SUCCESS`. Note that if the user already exists, it reuses the existing value returned by `selectors.getCurrentUser()` instead of calling `services.getUserById()`.
 
-In order to test the nominal case of this saga, a simple test would be written as following:
+You would like to assert that this saga dispatches the action `FETCH_USER_SUCCESS` when the call to `services.getUserById()` returns a user:
 
 ```ts
 import { createRunner } from 'redux-saga-testable';
 
-test('fetchUser() should dispatch FETCH_SUCCESS', () => {
-  const id = 123;
-  const mockUser = { user: 'name' };
+test('fetchUserWorker() should dispatch FETCH_USER_SUCCESS if services.getUserById() returns a user', () => {
+  const userId = 123;
+  const user = { user: 'name' };
 
-  createRunner(fetchUser, id)
-    .map(call(service.getUser, id), mockUser)
-    .should.put({ type: 'FETCH_SUCCESS', payload: mockUser });
+  createRunner(fetchUserWorker, {
+    type: 'FETCH_USER',
+    payload: { userId },
+  })
+    .map(call(services.getUserById, userId), user)
+    .should.put({ type: 'FETCH_USER_SUCCESS', payload: user });
 });
 ```
 
-[`createRunner(fetchUser, id)`](#createrunnersaga-args) creates a [`SagaRunner`](#sagarunner) object that exposes methods allowing to set up the behavior of the runner.
-
-[`.map(call(service.getUser, id), mockUser)`](#runnermapeffect-value--nextvalues) allows to map an effect to a value.
-
-[`.should.put({ type: 'FETCH_SUCCESS', payload: mockUser })`](#runnershouldyieldeffect) asserts that the saga yields a `PUT` effect (you can assert with any effect creator). Each method of `should` interface will run the saga.
-
-#### Use your own assertion way
-
-If you want to assert yourself without requiring built-in assertions, you can get the saga output by using [`runner.run()`](#runnerrun). It executes the saga and returns a [`SagaOutput`](#sagaoutput) object containing all the `effects` yielded by the saga, and optionally a `return` value or an `error` thrown.
-
-Note that since [`runner.run()`](#runnerrun) does not return the current [`SagaRunner`](#sagarunner) instance, it must be the last method call of the chain.
-
-### Test an error case
-
-You would also like to test the error case. It can be done using the [`throwError(…)`](#throwerrorerror) helper:
-
-```ts
-import { createRunner, throwError } from 'redux-saga-testable';
-
-test('fetchUser() should dispatch FETCH_FAILURE', () => {
-  const id = 456;
-  const mockError = new Error('Unable to fetch user');
-
-  createRunner(fetchUser, id)
-    .map(call(service.getUser, id), throwError(mockError))
-    .should.put({ type: 'FETCH_FAILURE', payload: mockError.message });
-});
-```
-
-[`throwError(…)`](#throwerrorerror) is an helper that tells the runner we want to throw an error when the saga yields the given effect (instead of just assigning a simple value as a result of the effect).
-
-### Finalize a saga prematurely
-
-In some cases, it would be useful to manually finalize a saga that runs infinitely:
-
-```ts
-function* watchNotify() {
-  try {
-    for (;;) {
-      yield take('NOTIFY');
-      yield call(service.notify);
-    }
-  } finally {
-    yield put({ type: 'NOTIFY_END' });
-  }
-}
-```
-
-You can do it by map an effect to [`finalize()`](#finalize) as a value:
-
-```ts
-import { createRunner, finalize } from 'redux-saga-testable';
-
-test('watchNotify() should dispatch NOTIFY_END', () => {
-  createRunner(watchNotify)
-    .map(call(service.notify), finalize())
-    .should.put({ type: 'NOTIFY_END' });
-});
-```
-
-The saga will be finalized after yielding `call(service.notify)` effect and, in this case, will reach the `finally` block.
-
-### Catch an error thrown by a saga
-
-Sometimes a saga (which is not a root saga) could throw an error:
-
-```ts
-function* findUser(id: number) {
-  const user = yield call(service.getUser, id);
-
-  if (!user) {
-    throw new Error(`Unable to find user ${id}`);
-  }
-
-  return user;
-}
-```
-
-When it is the expected behavior to test, you would like to avoid the saga throws an error and causes a test failure. You have to invoke [`runner.catch(…)`](#runnercatcherror) in order to swallow the thrown error.
-
-You can then make an assertion, like [`runner.should.throw(…)`](#runnershouldthrowerror).
-
-```ts
-import { createRunner } from 'redux-saga-testable';
-
-test('findUser() should throw an error', () => {
-  const id = 789;
-
-  createRunner(findUser, id)
-    .map(call(service.getUser, id), undefined)
-    .catch(Error)
-    .should.throw(/^Unable to find user/);
-});
-```
-
-The runner will catch the error thrown by the saga and will record it under the key `error` of the [`SagaOutput`](#sagaoutput) object. Since it will not rethrow the error, the test will not fail and we can make assertions on the [`SagaOutput`](#sagaoutput) object. All the yielded effects remain recorded.
-
-[Get the above examples](/test/examples.test.ts).
-
-### Clone a saga runner instance
-
-In order to have more concise tests, this feature allows to manage multiple runner instances (almost same purpose of [`cloneableGenerator`](https://github.com/redux-saga/redux-saga/tree/master/docs/api#cloneablegeneratorgeneratorfunc)).
-
-When [`runner.clone()`](#runnerclone) is invoked, a new [`SagaRunner`](#sagarunner) is created from the previous state. It is no longer required to remap effects (or catch error) again.
-
-```ts
-const saga = function*() {
-  const result1 = yield call(fn1);
-  const result2 = yield call(fn2);
-  const result3 = yield call(fn3);
-
-  if (result1) {
-    yield fork(fn1);
-  }
-
-  if (result2) {
-    yield fork(fn2);
-  }
-
-  if (result3) {
-    yield fork(fn3);
-  }
-
-  yield put({ type: 'SUCCESS', payload: [result1, result2, result3] });
-};
-
-const runner = createRunner(saga);
-
-const runner1 = runner.clone();
-const runner2 = runner.clone();
-
-runner1.map(call(fn1), 'result1');
-runner1.should.yield(fork(fn1));
-runner1.should.not.yield(fork(fn2));
-runner1.should.not.yield(fork(fn3));
-
-runner2.map(call(fn2), 'result2');
-
-// clones the “runner2" instance with its effect mapping
-const runner3 = runner2.clone();
-
-runner2.should.not.yield(fork(fn1));
-runner2.should.yield(fork(fn2));
-runner2.should.not.yield(fork(fn3));
-
-runner3.map(call(fn3), 'result3');
-runner3.should.not.yield(fork(fn1));
-runner3.should.yield(fork(fn2));
-runner3.should.yield(fork(fn3));
-
-const output1 = runner1.run();
-const output2 = runner2.run();
-const output3 = runner3.run();
-
-expect(output1.effects).toContainEqual(
-  put({ type: 'SUCCESS', payload: ['result1', undefined, undefined] }),
-);
-expect(output2.effects).toContainEqual(
-  put({ type: 'SUCCESS', payload: [undefined, 'result2', undefined] }),
-);
-
-// "runner3" keeps the effect mapping of the "runner2"
-expect(output3.effects).toContainEqual(
-  put({ type: 'SUCCESS', payload: [undefined, 'result2', 'result3'] }),
-);
-```
-
-## API
-
-### `createRunner(saga[, ...args])`
-
-Creates a [SagaRunner](#sagarunner).
-
-- `saga: Function` - a saga to use with the runner
-- `args?: any[]` - arguments to be passed to the saga
-
-Returns a [`SagaRunner`](#sagarunner).
-
-```ts
-const runner = createRunner(fetchUser, 'user_id');
-```
-
-### `runner.map(effect, value [, ...nextValues])`
-
-Maps an effect to a value.
-
-- `effect: Effect` - an effect to match
-- `value: any` - a value to assign
-- `nextValues?: any[]` - next values to assign
-
-Returns the current [`SagaRunner`](#sagarunner).
-
-```ts
-createRunner(fetchUser, 'user_id')
-  .map(call(getUser, 'user_id'), { name: 'mock name' })
-  .run();
-```
-
-See also:
-
-- [`throwError(error)`](#throwerrorerror)
-- [`finalize()`](#finalize)
-
-### `runner.catch(error)`
-
-Catches silently an error thrown by the saga.
-
-- `error: ErrorPattern` - a pattern that matches the thrown error
-
-  The `ErrorPattern` can be:
-
-  - a sub `string`
-  - a `RegExp`
-  - an `Error` object
-  - an `Error` class
-
-Returns the current [`SagaRunner`](#sagarunner).
-
-```ts
-createRunner(fetchUser, 'unknown_id')
-  .catch(/User not found/)
-  .run();
-```
-
-### `runner.clone()`
-
-Clones the current runner instance.
-
-Returns a copy of the current [`SagaRunner`](#sagarunner).
-
-```ts
-const runner1 = createRunner(fetchUser, 'user_id');
-const runner2 = runner1.clone();
-
-runner2.map(call(getUser), { name: 'mock name' });
-
-runner1.should.put({
-  type: 'FETCH_SUCCESS',
-  payload: { user: undefined },
-});
-
-runner2.should.put({
-  type: 'FETCH_SUCCESS',
-  payload: { user: { name: 'mock name' } },
-});
-```
-
-### `runner.run()`
-
-Runs the saga.
-
-Returns a [`SagaOutput`](#sagaoutput).
-
-```ts
-const output = createRunner(fetchUser).run();
-```
-
-### `runner.should.yield(effect)`
-
-Asserts that the saga yields an effect.
-
-- `effect: Effect` - an expected yielded effect
-
-Returns the current [`SagaRunner`](#sagarunner).
-
-```ts
-createRunner(fetchUser, 'user_id').should.yield(
-  put({
-    type: 'FETCH_USER_SUCCESS',
-    payload: { name: 'mock name' },
-  }),
-);
-```
-
-**Since v0.3, you can use effect creator aliases:**
-
-```ts
-createRunner(fetchUser, 'user_id').should.put({
-  type: 'FETCH_USER_SUCCESS',
-  payload: { name: 'mock name' },
-});
-```
-
-### `runner.should.return(value)`
-
-Asserts that the saga returns a value.
-
-- `value: any` - an expected return value
-
-Returns the current [`SagaRunner`](#sagarunner).
-
-```ts
-createRunner(fetchUser, 'user_id').should.return({ name: 'mock name' });
-```
-
-### `runner.should.throw(error)`
-
-Asserts that the saga throws an error.
-
-- `error: ErrorPattern` - an error pattern that matches the expected thrown error
-
-  The `ErrorPattern` can be:
-
-  - a sub `string`
-  - a `RegExp`
-  - an `Error` object
-  - an `Error` class
-
-Returns the current [`SagaRunner`](#sagarunner).
-
-```ts
-createRunner(fetchUser, 'unknown_id')
-  .catch(Error)
-  .should.throw(/User not found/);
-```
-
-### `throwError(error)`
-
-Throws an error from the saga when mapped as a value.
-
-- `error: Error` - an error to throw
-
-Returns a `ThrowError` value.
-
-```ts
-createRunner(fetchUser)
-  .map(getUser, throwError(new Error('Unable to get user')))
-  .run();
-```
-
-### `finalize()`
-
-Finalizes the saga when mapped as a value.
-
-Returns a `Finalize` value.
-
-```ts
-createRunner(fetchUser)
-  .map(getUser, finalize())
-  .run();
-```
-
-### `SagaRunner`
-
-The saga runner object returned by [`createRunner()`](#createrunnersaga-args).
-
-- [`map: Function`](#runnermapeffect-value--nextvalues)
-- [`catch: Function`](#runnercatcherror)
-- [`clone: Function`](#runnerclone)
-- [`run: Function`](#runnerrun)
-- [`should: SagaAssertions`](#sagaassertions)
-
-### `SagaAssertions`
-
-The saga assertions object exposed by `runner.should`.
-
-- [`yield: Function`](#runnershouldyieldeffect)
-- [`return: Function`](#runnershouldreturnvalue)
-- [`throw: Function`](#runnershouldthrowerror)
-
-### `SagaOutput`
-
-The saga output object returned by [`runner.run()`](#runnerrun).
-
-- `effects: Effect[]` - the yielded effects
-- `return?: any` - the return value
-- `error?: Error` - the thrown error
+Let's see what happens step by step:
+
+> ```code
+> import { createRunner } from 'redux-saga-testable';
+> ```
+>
+> Imports the saga runner creator function.
+>
+> ```code
+> createRunner(fetchUserWorker, {
+>   type: 'FETCH_USER',
+>   payload: { userId: userId },
+> })
+> ```
+>
+> Creates a saga runner instance from the saga `fetchUserWorker` and its action.
+>
+> ```code
+> .map(call(services.getUserById, userId), user)
+> ```
+>
+> Maps the effect `call(services.getUserById, id)` to the value `user`.
+>
+> ```code
+> .should.put({ type: 'FETCH_USER_SUCCESS', payload: user });
+> ```
+>
+> Asserts that the saga yields the effect `put({ type: 'FETCH_USER_SUCCESS', payload: user })`.
+
+The test will pass if the runner can make the given assertions. Otherwise an error will be thrown and the test will fail.
+
+**See the [tutorial][tutorial] for more advanced examples or see the [API documentation][api].**
+
+## Contribute
+
+Pull requests are welcome.
+
+To make one, fork this repository, clone it to your local and run `npm install`. Do your changes. Once you are done, commit and push to your forked repository and make your pull request.
+
+See current [issues](https://github.com/jeromeludmann/redux-saga-testable/issues) but feel free to bring what you need.
 
 ## License
 
-[MIT](LICENSE)
+MIT
+
+[api]: /docs/api.md
+[tutorial]: /docs/tutorial.md

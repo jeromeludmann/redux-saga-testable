@@ -1,0 +1,55 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`fetchUserWorker() with snapshot testing 1`] = `
+Object {
+  "effects": Array [
+    Object {
+      "@@redux-saga/IO": true,
+      "combinator": false,
+      "payload": Object {
+        "action": Object {
+          "type": "FETCH_USER_REQUEST",
+        },
+        "channel": undefined,
+      },
+      "type": "PUT",
+    },
+    Object {
+      "@@redux-saga/IO": true,
+      "combinator": false,
+      "payload": Object {
+        "args": Array [],
+        "selector": [Function],
+      },
+      "type": "SELECT",
+    },
+    Object {
+      "@@redux-saga/IO": true,
+      "combinator": false,
+      "payload": Object {
+        "args": Array [
+          123,
+        ],
+        "context": null,
+        "fn": [Function],
+      },
+      "type": "CALL",
+    },
+    Object {
+      "@@redux-saga/IO": true,
+      "combinator": false,
+      "payload": Object {
+        "action": Object {
+          "payload": Object {
+            "user": "name",
+          },
+          "type": "FETCH_USER_SUCCESS",
+        },
+        "channel": undefined,
+      },
+      "type": "PUT",
+    },
+  ],
+  "return": undefined,
+}
+`;
