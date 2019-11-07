@@ -80,11 +80,11 @@ Assume that we have the following saga:
 ```ts
 function* fetchUser(id: number) {
   try {
-    yield put({ type: 'FETCH_PENDING' })
-    const user = yield call(service.getUser, id)
-    yield put({ type: 'FETCH_SUCCESS', payload: user })
+    yield put({ type: 'FETCH_PENDING' });
+    const user = yield call(service.getUser, id);
+    yield put({ type: 'FETCH_SUCCESS', payload: user });
   } catch (error) {
-    yield put({ type: 'FETCH_FAILURE', payload: error.message })
+    yield put({ type: 'FETCH_FAILURE', payload: error.message });
   }
 }
 ```
@@ -94,16 +94,16 @@ function* fetchUser(id: number) {
 In order to test the nominal case of this saga, a simple test would be written as following:
 
 ```ts
-import { createRunner } from 'redux-saga-testable'
+import { createRunner } from 'redux-saga-testable';
 
 test('fetchUser() should dispatch FETCH_SUCCESS', () => {
-  const id = 123
-  const mockUser = { user: 'name' }
+  const id = 123;
+  const mockUser = { user: 'name' };
 
   createRunner(fetchUser, id)
     .map(call(service.getUser, id), mockUser)
-    .should.put({ type: 'FETCH_SUCCESS', payload: mockUser })
-})
+    .should.put({ type: 'FETCH_SUCCESS', payload: mockUser });
+});
 ```
 
 [`createRunner(fetchUser, id)`](#createrunnersaga-args) creates a [`SagaRunner`](#sagarunner) object that exposes methods allowing to set up the behavior of the runner.
@@ -123,16 +123,16 @@ Note that since [`runner.run()`](#runnerrun) does not return the current [`SagaR
 You would also like to test the error case. It can be done using the [`throwError(…)`](#throwerrorerror) helper:
 
 ```ts
-import { createRunner, throwError } from 'redux-saga-testable'
+import { createRunner, throwError } from 'redux-saga-testable';
 
 test('fetchUser() should dispatch FETCH_FAILURE', () => {
-  const id = 456
-  const mockError = new Error('Unable to fetch user')
+  const id = 456;
+  const mockError = new Error('Unable to fetch user');
 
   createRunner(fetchUser, id)
     .map(call(service.getUser, id), throwError(mockError))
-    .should.put({ type: 'FETCH_FAILURE', payload: mockError.message })
-})
+    .should.put({ type: 'FETCH_FAILURE', payload: mockError.message });
+});
 ```
 
 [`throwError(…)`](#throwerrorerror) is an helper that tells the runner we want to throw an error when the saga yields the given effect (instead of just assigning a simple value as a result of the effect).
@@ -145,11 +145,11 @@ In some cases, it would be useful to manually finalize a saga that runs infinite
 function* watchNotify() {
   try {
     for (;;) {
-      yield take('NOTIFY')
-      yield call(service.notify)
+      yield take('NOTIFY');
+      yield call(service.notify);
     }
   } finally {
-    yield put({ type: 'NOTIFY_END' })
+    yield put({ type: 'NOTIFY_END' });
   }
 }
 ```
@@ -157,13 +157,13 @@ function* watchNotify() {
 You can do it by map an effect to [`finalize()`](#finalize) as a value:
 
 ```ts
-import { createRunner, finalize } from 'redux-saga-testable'
+import { createRunner, finalize } from 'redux-saga-testable';
 
 test('watchNotify() should dispatch NOTIFY_END', () => {
   createRunner(watchNotify)
     .map(call(service.notify), finalize())
-    .should.put({ type: 'NOTIFY_END' })
-})
+    .should.put({ type: 'NOTIFY_END' });
+});
 ```
 
 The saga will be finalized after yielding `call(service.notify)` effect and, in this case, will reach the `finally` block.
@@ -174,13 +174,13 @@ Sometimes a saga (which is not a root saga) could throw an error:
 
 ```ts
 function* findUser(id: number) {
-  const user = yield call(service.getUser, id)
+  const user = yield call(service.getUser, id);
 
   if (!user) {
-    throw new Error(`Unable to find user ${id}`)
+    throw new Error(`Unable to find user ${id}`);
   }
 
-  return user
+  return user;
 }
 ```
 
@@ -189,16 +189,16 @@ When it is the expected behavior to test, you would like to avoid the saga throw
 You can then make an assertion, like [`runner.should.throw(…)`](#runnershouldthrowerror).
 
 ```ts
-import { createRunner } from 'redux-saga-testable'
+import { createRunner } from 'redux-saga-testable';
 
 test('findUser() should throw an error', () => {
-  const id = 789
+  const id = 789;
 
   createRunner(findUser, id)
     .map(call(service.getUser, id), undefined)
     .catch(Error)
-    .should.throw(/^Unable to find user/)
-})
+    .should.throw(/^Unable to find user/);
+});
 ```
 
 The runner will catch the error thrown by the saga and will record it under the key `error` of the [`SagaOutput`](#sagaoutput) object. Since it will not rethrow the error, the test will not fail and we can make assertions on the [`SagaOutput`](#sagaoutput) object. All the yielded effects remain recorded.
@@ -213,64 +213,64 @@ When [`runner.clone()`](#runnerclone) is invoked, a new [`SagaRunner`](#sagarunn
 
 ```ts
 const saga = function*() {
-  const result1 = yield call(fn1)
-  const result2 = yield call(fn2)
-  const result3 = yield call(fn3)
+  const result1 = yield call(fn1);
+  const result2 = yield call(fn2);
+  const result3 = yield call(fn3);
 
   if (result1) {
-    yield fork(fn1)
+    yield fork(fn1);
   }
 
   if (result2) {
-    yield fork(fn2)
+    yield fork(fn2);
   }
 
   if (result3) {
-    yield fork(fn3)
+    yield fork(fn3);
   }
 
-  yield put({ type: 'SUCCESS', payload: [result1, result2, result3] })
-}
+  yield put({ type: 'SUCCESS', payload: [result1, result2, result3] });
+};
 
-const runner = createRunner(saga)
+const runner = createRunner(saga);
 
-const runner1 = runner.clone()
-const runner2 = runner.clone()
+const runner1 = runner.clone();
+const runner2 = runner.clone();
 
-runner1.map(call(fn1), 'result1')
-runner1.should.yield(fork(fn1))
-runner1.should.not.yield(fork(fn2))
-runner1.should.not.yield(fork(fn3))
+runner1.map(call(fn1), 'result1');
+runner1.should.yield(fork(fn1));
+runner1.should.not.yield(fork(fn2));
+runner1.should.not.yield(fork(fn3));
 
-runner2.map(call(fn2), 'result2')
+runner2.map(call(fn2), 'result2');
 
 // clones the “runner2" instance with its effect mapping
-const runner3 = runner2.clone()
+const runner3 = runner2.clone();
 
-runner2.should.not.yield(fork(fn1))
-runner2.should.yield(fork(fn2))
-runner2.should.not.yield(fork(fn3))
+runner2.should.not.yield(fork(fn1));
+runner2.should.yield(fork(fn2));
+runner2.should.not.yield(fork(fn3));
 
-runner3.map(call(fn3), 'result3')
-runner3.should.not.yield(fork(fn1))
-runner3.should.yield(fork(fn2))
-runner3.should.yield(fork(fn3))
+runner3.map(call(fn3), 'result3');
+runner3.should.not.yield(fork(fn1));
+runner3.should.yield(fork(fn2));
+runner3.should.yield(fork(fn3));
 
-const output1 = runner1.run()
-const output2 = runner2.run()
-const output3 = runner3.run()
+const output1 = runner1.run();
+const output2 = runner2.run();
+const output3 = runner3.run();
 
 expect(output1.effects).toContainEqual(
   put({ type: 'SUCCESS', payload: ['result1', undefined, undefined] }),
-)
+);
 expect(output2.effects).toContainEqual(
   put({ type: 'SUCCESS', payload: [undefined, 'result2', undefined] }),
-)
+);
 
 // "runner3" keeps the effect mapping of the "runner2"
 expect(output3.effects).toContainEqual(
   put({ type: 'SUCCESS', payload: [undefined, 'result2', 'result3'] }),
-)
+);
 ```
 
 ## API
@@ -285,7 +285,7 @@ Creates a [SagaRunner](#sagarunner).
 Returns a [`SagaRunner`](#sagarunner).
 
 ```ts
-const runner = createRunner(fetchUser, 'user_id')
+const runner = createRunner(fetchUser, 'user_id');
 ```
 
 ### `runner.map(effect, value [, ...nextValues])`
@@ -301,7 +301,7 @@ Returns the current [`SagaRunner`](#sagarunner).
 ```ts
 createRunner(fetchUser, 'user_id')
   .map(call(getUser, 'user_id'), { name: 'mock name' })
-  .run()
+  .run();
 ```
 
 See also:
@@ -327,7 +327,7 @@ Returns the current [`SagaRunner`](#sagarunner).
 ```ts
 createRunner(fetchUser, 'unknown_id')
   .catch(/User not found/)
-  .run()
+  .run();
 ```
 
 ### `runner.clone()`
@@ -337,20 +337,20 @@ Clones the current runner instance.
 Returns a copy of the current [`SagaRunner`](#sagarunner).
 
 ```ts
-const runner1 = createRunner(fetchUser, 'user_id')
-const runner2 = runner1.clone()
+const runner1 = createRunner(fetchUser, 'user_id');
+const runner2 = runner1.clone();
 
-runner2.map(call(getUser), { name: 'mock name' })
+runner2.map(call(getUser), { name: 'mock name' });
 
 runner1.should.put({
   type: 'FETCH_SUCCESS',
   payload: { user: undefined },
-})
+});
 
 runner2.should.put({
   type: 'FETCH_SUCCESS',
   payload: { user: { name: 'mock name' } },
-})
+});
 ```
 
 ### `runner.run()`
@@ -360,7 +360,7 @@ Runs the saga.
 Returns a [`SagaOutput`](#sagaoutput).
 
 ```ts
-const output = createRunner(fetchUser).run()
+const output = createRunner(fetchUser).run();
 ```
 
 ### `runner.should.yield(effect)`
@@ -377,7 +377,7 @@ createRunner(fetchUser, 'user_id').should.yield(
     type: 'FETCH_USER_SUCCESS',
     payload: { name: 'mock name' },
   }),
-)
+);
 ```
 
 **Since v0.3, you can use effect creator aliases:**
@@ -386,7 +386,7 @@ createRunner(fetchUser, 'user_id').should.yield(
 createRunner(fetchUser, 'user_id').should.put({
   type: 'FETCH_USER_SUCCESS',
   payload: { name: 'mock name' },
-})
+});
 ```
 
 ### `runner.should.return(value)`
@@ -398,7 +398,7 @@ Asserts that the saga returns a value.
 Returns the current [`SagaRunner`](#sagarunner).
 
 ```ts
-createRunner(fetchUser, 'user_id').should.return({ name: 'mock name' })
+createRunner(fetchUser, 'user_id').should.return({ name: 'mock name' });
 ```
 
 ### `runner.should.throw(error)`
@@ -419,7 +419,7 @@ Returns the current [`SagaRunner`](#sagarunner).
 ```ts
 createRunner(fetchUser, 'unknown_id')
   .catch(Error)
-  .should.throw(/User not found/)
+  .should.throw(/User not found/);
 ```
 
 ### `throwError(error)`
@@ -433,7 +433,7 @@ Returns a `ThrowError` value.
 ```ts
 createRunner(fetchUser)
   .map(getUser, throwError(new Error('Unable to get user')))
-  .run()
+  .run();
 ```
 
 ### `finalize()`
@@ -445,7 +445,7 @@ Returns a `Finalize` value.
 ```ts
 createRunner(fetchUser)
   .map(getUser, finalize())
-  .run()
+  .run();
 ```
 
 ### `SagaRunner`
