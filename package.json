@@ -1,7 +1,7 @@
 {
   "name": "redux-saga-testable",
   "version": "0.3.0-beta.0",
-  "description": "Practical unit test library for redux-saga",
+  "description": "Make your sagas more easily testable",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
   "files": [
