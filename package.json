@@ -10,7 +10,6 @@
   "scripts": {
     "test": "jest",
     "test-coverage": "npm test -- --collectCoverage",
-    "coveralls": "npm run test-coverage && cat coverage/lcov.info | coveralls",
     "build": "rm -rf lib && tsc",
     "prepublish": "npm run test-coverage && npm run build"
   },
