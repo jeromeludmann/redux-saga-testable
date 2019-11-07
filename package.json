@@ -9,10 +9,10 @@
   ],
   "scripts": {
     "test": "jest",
-    "cover": "npm test -- --collectCoverage",
+    "test-coverage": "npm test -- --collectCoverage",
+    "coveralls": "npm run test-coverage && cat coverage/lcov.info | coveralls",
     "build": "rm -rf lib && tsc",
-    "prepublish": "npm run cover && npm run build",
-    "coveralls": "jest --coverage && cat coverage/lcov.info | coveralls"
+    "prepublish": "npm run test-coverage && npm run build"
   },
   "repository": {
     "type": "git",
@@ -33,18 +33,21 @@
   "bugs": {
     "url": "https://github.com/jeromeludmann/redux-saga-testable/issues"
   },
-  "dependencies": {},
   "devDependencies": {
     "@redux-saga/testing-utils": "^1.1.1",
     "@types/jest": "^24.0.11",
     "@types/node": "^11.13.4",
     "coveralls": "^3.0.3",
+    "husky": "^3.0.9",
     "jest": "^24.7.1",
+    "lint-staged": "^9.4.2",
+    "prettier": "^1.18.2",
     "redux-saga": "^1.1.1",
     "ts-jest": "^24.0.2",
     "typescript": "^3.6.4"
   },
   "peerDependencies": {
     "redux-saga": "^1.0.0"
-  }
+  },
+  "dependencies": {}
 }
