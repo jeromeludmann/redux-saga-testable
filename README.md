@@ -1,10 +1,10 @@
 # redux-saga-testable
 
-[v0.3](https://github.com/jeromeludmann/redux-saga-testable/pull/12)
-
-[![Build Status](https://travis-ci.org/jeromeludmann/redux-saga-testable.svg)](https://travis-ci.org/jeromeludmann/redux-saga-testable)
-[![Coverage Status](https://coveralls.io/repos/github/jeromeludmann/redux-saga-testable/badge.svg)](https://coveralls.io/github/jeromeludmann/redux-saga-testable)
-[![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![npm](https://img.shields.io/npm/v/redux-saga-testable)](https://www.npmjs.com/package/redux-saga-testable)
+[![npm](https://img.shields.io/npm/dt/redux-saga-testable)](https://www.npmjs.com/package/redux-saga-testable)
+[![Travis (.org)](https://img.shields.io/travis/jeromeludmann/redux-saga-testable)](https://travis-ci.org/jeromeludmann/redux-saga-testable)
+[![Coveralls github](https://img.shields.io/coveralls/github/jeromeludmann/redux-saga-testable)](https://coveralls.io/github/jeromeludmann/redux-saga-testable)
+[![NPM](https://img.shields.io/npm/l/redux-saga-testable)](LICENSE)
 
 Practical unit test library for [`redux-saga`](https://github.com/redux-saga/redux-saga) providing features like:
 
