@@ -1,0 +1,6 @@
+{
+  "fileExtensions": [
+    "ts"
+  ],
+  "tsConfig": "tsconfig.json"
+}
