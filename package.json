@@ -8,11 +8,13 @@
     "/lib"
   ],
   "scripts": {
-    "build": "rm -rf lib && tsc",
     "test": "jest",
+    "build": "tsc",
+    "type-checking": "tsc --noEmit",
+    "circular-deps": "madge --circular src",
     "test-coverage": "npm test -- --coverage",
-    "circular-dependencies": "madge --circular src",
-    "checks": "npm run circular-dependencies && npm run test-coverage",
+    "checks": "npm run type-checking && npm run circular-deps && npm run test-coverage",
+    "prebuild": "rm -rf lib",
     "prepublish": "npm run checks && npm run build"
   },
   "repository": {
