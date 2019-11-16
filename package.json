@@ -8,10 +8,12 @@
     "/lib"
   ],
   "scripts": {
-    "test": "jest",
-    "test-coverage": "npm test -- --collectCoverage",
     "build": "rm -rf lib && tsc",
-    "prepublish": "npm run test-coverage && npm run build"
+    "test": "jest",
+    "test-coverage": "npm test -- --coverage",
+    "circular-dependencies": "madge --circular src",
+    "checks": "npm run circular-dependencies && npm run test-coverage",
+    "prepublish": "npm run checks && npm run build"
   },
   "repository": {
     "type": "git",
@@ -40,6 +42,7 @@
     "husky": "^3.0.9",
     "jest": "^24.9.0",
     "lint-staged": "^9.4.3",
+    "madge": "^3.6.0",
     "prettier": "^1.19.1",
     "redux-saga": "^1.1.3",
     "ts-jest": "^24.1.0",
