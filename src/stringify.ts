@@ -1,6 +1,13 @@
 const SPACE = 2;
 const DEPTH = 6;
 
+interface StringifyState {
+  space: string;
+  totalSpace: string;
+  maxDepth: number;
+  currentDepth: number;
+}
+
 export function stringify(
   value: any,
   opts: { space?: number; depth?: number } = {},
@@ -16,14 +23,7 @@ export function stringify(
   })}`;
 }
 
-interface State {
-  space: string;
-  totalSpace: string;
-  maxDepth: number;
-  currentDepth: number;
-}
-
-function stringifyValue(value: any, state: State): string {
+function stringifyValue(value: any, state: StringifyState): string {
   switch (typeof value) {
     case 'undefined':
       return 'undefined';
@@ -43,7 +43,7 @@ function stringifyValue(value: any, state: State): string {
   }
 }
 
-function stringifyObject(value: any, state: State): string {
+function stringifyObject(value: any, state: StringifyState): string {
   switch (value.constructor) {
     case Object:
       const keys: Array<string | symbol> = Object.keys(value);
@@ -71,18 +71,17 @@ function stringifyObject(value: any, state: State): string {
   }
 }
 
-export function stringifyWithTemplate(
-  stringifier: (nextParams: State) => Array<string | symbol>,
-  state: State,
-  opts: { prefix?: string; wrapper?: '{}' | '[]'; size?: number } = {},
+function stringifyWithTemplate(
+  stringifier: (nextParams: StringifyState) => Array<string | symbol>,
+  state: StringifyState,
+  opts: { wrapper?: '{}' | '[]'; size: number },
 ) {
-  const prefix = opts.prefix ? `${opts.prefix} ` : '';
   const [start, end] = (opts.wrapper || '{}').split('');
 
-  const wrap = (str: string = '') => `${prefix}${start}${str}${end}`;
+  const wrap = (str: string = '') => `${start}${str}${end}`;
 
   if (state.currentDepth === state.maxDepth) {
-    return `${wrap(`\u2026`)}${opts.size ? ` (${opts.size})` : ''}`;
+    return `${wrap(`\u2026`)} (${opts.size})`;
   }
 
   const nextState = {
