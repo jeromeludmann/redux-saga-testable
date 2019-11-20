@@ -1,6 +1,6 @@
 {
   "name": "redux-saga-testable",
-  "version": "0.3.0-beta.0",
+  "version": "0.3.0",
   "description": "Make your sagas more easily testable",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
