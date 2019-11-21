@@ -8,12 +8,13 @@
 
 Unit test library for [redux-saga](https://github.com/redux-saga/redux-saga).
 
-Features:
+## Features
 
-- runs sagas without iterating manually
-- allows to map effects to values
-- provides built-in effect assertions
-- supports TypeScript
+- Runs sagas without iterating manually
+- Allows to map effects to values
+- Provides built-in effect assertions
+- Works with snapshot testing
+- Supports TypeScript
 
 ## Contents
 
