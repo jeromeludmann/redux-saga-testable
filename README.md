@@ -30,17 +30,15 @@ Make [redux-saga](https://github.com/redux-saga/redux-saga) more easily testable
 
 ## Overview
 
-It's about sagas and unit tests.
+It's about [redux-saga](https://github.com/redux-saga/redux-saga) and unit tests.
 
 When you write unit tests of sagas, you have to manually iterate on the generator and pass your next value for each yielded effect. The number of iterations you have to `next()` depends on the number of `yield` in the saga.
 
-If a `yield` statement is added, removed or just swapped with another, there is a good chance that you pass your next value to an unexpected effect.
-
-This causes tests boring to write, not easy to understand and too prone to breaking.
+If a `yield` statement is added, removed or just swapped with another, there is a good chance that you pass your next value to an unexpected effect. This causes tests boring to write, not easy to understand and too prone to breaking.
 
 Ideally, you should not have to worry about what the saga does behind. You would just like to map some effects to some values and assert that some arbitrary effects happened, in a clear and concise way.
 
-If you have to deal with that, **redux-saga-testable** could make your sagas more easily testable. It runs your sagas without the need to iterate on the generator yourself, allows you to map effects to values and provides the assertions you need.
+**redux-saga-testable** could help you. It runs your sagas without the need to iterate on the generator yourself, allows you to map effects to values and provides the assertions you need.
 
 ## Getting started
 
