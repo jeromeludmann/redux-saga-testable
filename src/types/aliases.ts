@@ -2,7 +2,6 @@ import { Action } from 'redux';
 import { TakeableChannel, PuttableChannel, FlushableChannel } from 'redux-saga';
 import {
   HelperWorkerParameters,
-  ChannelPutEffect,
   CpsCallback,
   CpsFunctionParameters,
   Tail,
@@ -139,7 +138,7 @@ export interface ExtendedSagaAssertions<R> {
    */
   put<A extends Action>(action: A): R;
 
-  put<T>(channel: PuttableChannel<T>, action: T | END): ChannelPutEffect<T>;
+  put<T>(channel: PuttableChannel<T>, action: T | END): R;
 
   /**
    * Alias for `should.yield(putResolve(...))`
