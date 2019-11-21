@@ -6,7 +6,7 @@
 [![Coveralls github](https://img.shields.io/coveralls/github/jeromeludmann/redux-saga-testable)](https://coveralls.io/github/jeromeludmann/redux-saga-testable)
 [![NPM](https://img.shields.io/npm/l/redux-saga-testable)](/LICENSE)
 
-Unit test library for [redux-saga](https://github.com/redux-saga/redux-saga).
+Make [redux-saga](https://github.com/redux-saga/redux-saga) more easily testable.
 
 ## Features
 
