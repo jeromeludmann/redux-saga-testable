@@ -29,6 +29,7 @@ import {
 } from 'redux-saga/effects';
 import { createMockTask } from '@redux-saga/testing-utils';
 import { createRunner } from '../src';
+import { runAndCatch, RUNNER_CALL_SITE } from './helpers';
 
 const fn1 = () => {};
 const fn2 = () => {};
@@ -332,4 +333,16 @@ test('should.race()', () => {
       response1: call(fn2),
       response2: call(fn1),
     });
+});
+
+test('checks stack trace', () => {
+  const saga = function*() {
+    yield put({ type: 'FETCH_USER' });
+  };
+
+  const error = runAndCatch(() =>
+    createRunner(saga).should.put({ type: 'FETCH_PRODUCT' }),
+  );
+
+  expect(error.callSite).toMatch(RUNNER_CALL_SITE);
 });

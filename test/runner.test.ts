@@ -1,12 +1,16 @@
 import { Effect, put, call, fork } from 'redux-saga/effects';
 import { createRunner, throwError, finalize, use } from '../src';
 import { SagaRunner, ThrowError } from '../src/types/runner';
+import {
+  runAndCatch,
+  RUNNER_CALL_SITE,
+  USER_CALL_SITE,
+  UserError,
+} from './helpers';
 
 const fn1 = () => {};
 const fn2 = () => {};
 const fn3 = () => {};
-
-const sagaError = new Error('Saga fails');
 
 describe('createRunner()', () => {
   test('creates a runner with a saga and its arguments', () => {
@@ -30,7 +34,10 @@ describe('createRunner()', () => {
   });
 
   test('does not create a runner without providing a saga', () => {
-    expect(createRunner).toThrow('Missing saga argument');
+    const error = runAndCatch(() => (createRunner as () => SagaRunner)());
+
+    expect(error.message).toMatch('Missing saga argument');
+    expect(error.callSite).toMatch(RUNNER_CALL_SITE);
   });
 });
 
@@ -93,34 +100,35 @@ describe('run()', () => {
   test('does not run a saga that throws an error', () => {
     const saga = function*() {
       yield call(fn1);
-      throw sagaError;
+      throw new UserError('Failure');
     };
 
-    const runSaga = () => createRunner(saga).run();
+    const error = runAndCatch(() => createRunner(saga).run());
 
-    expect(runSaga).toThrow(sagaError.message);
+    expect(error.message).toMatch('Failure');
+    expect(error.callSite).toMatch(USER_CALL_SITE);
   });
 
   test('does not run a saga that throws an object', () => {
     const saga = function*() {
       yield call(fn1);
-      throw { message: sagaError.message };
+      throw { message: 'Failure' };
     };
 
     const runSaga = () => createRunner(saga).run();
 
-    expect(runSaga).toThrow(sagaError.message);
+    expect(runSaga).toThrow('Failure');
   });
 
   test('does not run a saga that throws a string', () => {
     const saga = function*() {
       yield call(fn1);
-      throw sagaError.message;
+      throw 'Failure';
     };
 
     const runSaga = () => createRunner(saga).run();
 
-    expect(runSaga).toThrow(sagaError.message);
+    expect(runSaga).toThrow('Failure');
   });
 
   test('does not run a saga that yields an infinity of effects', () => {
@@ -128,9 +136,10 @@ describe('run()', () => {
       for (;;) yield put({ type: 'SUCCESS' });
     };
 
-    const runSaga = () => createRunner(saga).run();
+    const error = runAndCatch(() => createRunner(saga).run());
 
-    expect(runSaga).toThrow('Maximum yielded effects size reached');
+    expect(error.message).toMatch('Maximum yielded effects size reached');
+    expect(error.callSite).toMatch(RUNNER_CALL_SITE);
   });
 });
 
@@ -161,25 +170,27 @@ describe('map()', () => {
     };
 
     const output = createRunner(saga)
-      .map(call(fn1), throwError(sagaError))
+      .map(call(fn1), throwError(new UserError('Failure')))
       .run();
 
     expect(output.effects).toContainEqual(
-      put({ type: 'FAILURE', payload: sagaError.message }),
+      put({ type: 'FAILURE', payload: 'Failure' }),
     );
   });
 
-  test('does not map an effect to a throwError() without providing an error argument', () => {
+  test('does not map an effect with throwError() without providing an error argument', () => {
     const saga = function*() {
       yield call(fn1);
     };
 
-    const runSaga = () =>
+    const error = runAndCatch(() =>
       createRunner(saga)
         .map(call(fn1), (throwError as () => ThrowError)())
-        .run();
+        .run(),
+    );
 
-    expect(runSaga).toThrow('Missing error argument');
+    expect(error.message).toMatch('Missing error argument');
+    expect(error.callSite).toMatch(RUNNER_CALL_SITE);
   });
 
   test('maps an effect to a finalize()', () => {
@@ -255,12 +266,14 @@ describe('map()', () => {
       yield put({ type: 'SUCCESS' });
     };
 
-    const runSaga = () =>
+    const error = runAndCatch(() =>
       createRunner(saga)
         .map(call(fn1), 'result')
-        .run();
+        .run(),
+    );
 
-    expect(runSaga).toThrow('Unused mapped values');
+    expect(error.message).toMatch('Unused mapped values');
+    expect(error.callSite).toMatch(RUNNER_CALL_SITE);
   });
 
   test('does not map an effect several times', () => {
@@ -269,13 +282,17 @@ describe('map()', () => {
       yield put({ type: 'SUCCESS', payload: result });
     };
 
-    const runSaga = () =>
+    const error = runAndCatch(() =>
       createRunner(saga)
         .map(call(fn1), 'result1')
         .map(call(fn1), 'result2')
-        .run();
+        .run(),
+    );
 
-    expect(runSaga).toThrow('Mapped values already provided for this effect');
+    expect(error.message).toMatch(
+      'Mapped values already provided for this effect',
+    );
+    expect(error.callSite).toMatch(RUNNER_CALL_SITE);
   });
 
   test('does not map an effect to too many values', () => {
@@ -284,12 +301,14 @@ describe('map()', () => {
       yield put({ type: 'SUCCESS', payload: result });
     };
 
-    const runSaga = () =>
+    const error = runAndCatch(() =>
       createRunner(saga)
         .map(call(fn1), 'result', 'unused result')
-        .run();
+        .run(),
+    );
 
-    expect(runSaga).toThrow('Unused mapped values');
+    expect(error.message).toMatch('Unused mapped values');
+    expect(error.callSite).toMatch(RUNNER_CALL_SITE);
   });
 
   test('does not map an effect without providing a value', () => {
@@ -298,14 +317,16 @@ describe('map()', () => {
       yield put({ type: 'SUCCESS', payload: result });
     };
 
-    const runSaga = () =>
+    const error = runAndCatch(() =>
       (createRunner(saga) as SagaRunner & {
         map: (effect: Effect) => SagaRunner;
       })
         .map(call(fn1))
-        .run();
+        .run(),
+    );
 
-    expect(runSaga).toThrow('The value to map is missing');
+    expect(error.message).toMatch('The value to map is missing');
+    expect(error.callSite).toMatch(RUNNER_CALL_SITE);
   });
 
   test('does not map an effect without providing an effect as an argument', () => {
@@ -314,12 +335,14 @@ describe('map()', () => {
       yield put({ type: 'SUCCESS', payload: result });
     };
 
-    const runSaga = () =>
+    const error = runAndCatch(() =>
       (createRunner(saga) as SagaRunner & { map: () => SagaRunner })
         .map()
-        .run();
+        .run(),
+    );
 
-    expect(runSaga).toThrow('Missing effect argument');
+    expect(error.message).toMatch('Missing effect argument');
+    expect(error.callSite).toMatch(RUNNER_CALL_SITE);
   });
 });
 
@@ -327,108 +350,108 @@ describe('catch()', () => {
   test('catches an error that includes the given string', () => {
     const saga = function*() {
       yield call(fn1);
-      throw sagaError;
+      throw new UserError('Failure');
     };
 
     const output = createRunner(saga)
-      .catch('fails')
+      .catch('Failure')
       .run();
 
-    expect(output.error).toEqual(sagaError);
+    expect(output.error).toEqual(new UserError('Failure'));
   });
 
   test('catches an error that matches the given regular expression', () => {
     const saga = function*() {
       yield call(fn1);
-      throw sagaError;
+      throw new UserError('Failure');
     };
 
     const output = createRunner(saga)
-      .catch(/^Saga fails$/)
+      .catch(/^Failure$/)
       .run();
 
-    expect(output.error).toEqual(sagaError);
+    expect(output.error).toEqual(new UserError('Failure'));
   });
 
   test('catches an error that is equal to the error object', () => {
     const saga = function*() {
       yield call(fn1);
-      throw sagaError;
+      throw new UserError('Failure');
     };
 
     const output = createRunner(saga)
-      .catch(sagaError)
+      .catch(new UserError('Failure'))
       .run();
 
-    expect(output.error).toEqual(sagaError);
+    expect(output.error).toEqual(new UserError('Failure'));
   });
 
   test('catches an error that is instance of the error class', () => {
     const saga = function*() {
       yield call(fn1);
-      throw new TypeError(sagaError.message);
+      throw new TypeError('Failure');
     };
 
     const output = createRunner(saga)
       .catch(TypeError)
       .run();
 
-    expect(output.error).toEqual(new TypeError(sagaError.message));
+    expect(output.error).toEqual(new TypeError('Failure'));
   });
 
   test('catches an error that inherits from the error class', () => {
     const saga = function*() {
       yield call(fn1);
-      throw new TypeError(sagaError.message);
+      throw new TypeError('Failure');
     };
 
     const output = createRunner(saga)
       .catch(Error)
       .run();
 
-    expect(output.error).toEqual(new TypeError(sagaError.message));
+    expect(output.error).toEqual(new TypeError('Failure'));
   });
 
   test('catches a thrown object that has a "message" property', () => {
     const saga = function*() {
       yield call(fn1);
-      throw { message: sagaError.message };
+      throw { message: 'Failure' };
     };
 
     const output = createRunner(saga)
-      .catch(sagaError.message)
+      .catch('Failure')
       .run();
 
-    expect(output.error).toEqual({
-      message: sagaError.message,
-    });
+    expect(output.error).toEqual({ message: 'Failure' });
   });
 
   test('catches a thrown string', () => {
     const saga = function*() {
       yield call(fn1);
-      throw sagaError.message;
+      throw 'Failure';
     };
 
     const output = createRunner(saga)
-      .catch(sagaError.message)
+      .catch('Failure')
       .run();
 
-    expect(output.error).toEqual(sagaError.message);
+    expect(output.error).toEqual('Failure');
   });
 
   test('does not catch an error that does not match the error pattern', () => {
     const saga = function*() {
       yield call(fn1);
-      throw sagaError;
+      throw new UserError('Failure');
     };
 
-    const runSaga = () =>
+    const error = runAndCatch(() =>
       createRunner(saga)
         .catch('unthrown error message')
-        .run();
+        .run(),
+    );
 
-    expect(runSaga).toThrow(sagaError.message);
+    expect(error.message).toMatch('Failure');
+    expect(error.callSite).toMatch(USER_CALL_SITE);
   });
 
   test('does not catch a thrown object that does not have "message" property', () => {
@@ -448,30 +471,34 @@ describe('catch()', () => {
   test('does not catch errors several times', () => {
     const saga = function*() {
       yield call(fn1);
-      throw sagaError;
+      throw new UserError('Failure');
     };
 
-    const runSaga = () =>
+    const error = runAndCatch(() =>
       createRunner(saga)
         .catch(/^Saga/)
         .catch(/fails$/)
-        .run();
+        .run(),
+    );
 
-    expect(runSaga).toThrow('Error pattern already provided');
+    expect(error.message).toMatch('Error pattern already provided');
+    expect(error.callSite).toMatch(RUNNER_CALL_SITE);
   });
 
   test('does not catch without providing an error pattern', () => {
     const saga = function*() {
       yield call(fn1);
-      throw sagaError;
+      throw new UserError('Failure');
     };
 
-    const runSaga = () =>
+    const error = runAndCatch(() =>
       (createRunner(saga) as SagaRunner & { catch: () => SagaRunner })
         .catch()
-        .run();
+        .run(),
+    );
 
-    expect(runSaga).toThrow('Missing error pattern argument');
+    expect(error.message).toMatch('Missing error pattern argument');
+    expect(error.callSite).toMatch(RUNNER_CALL_SITE);
   });
 
   test('does not catch an error that is not thrown', () => {
@@ -479,12 +506,14 @@ describe('catch()', () => {
       yield call(fn1);
     };
 
-    const runSaga = () =>
+    const error = runAndCatch(() =>
       createRunner(saga)
         .catch(Error)
-        .run();
+        .run(),
+    );
 
-    expect(runSaga).toThrow('No error thrown by the saga');
+    expect(error.message).toMatch('No error thrown by the saga');
+    expect(error.callSite).toMatch(RUNNER_CALL_SITE);
   });
 });
 
@@ -504,9 +533,10 @@ describe('should.yield()', () => {
   });
 
   test('does not assert that the saga yields an effect', () => {
-    const runSaga = () => createRunner(saga).should.yield(call(fn1));
+    const error = runAndCatch(() => createRunner(saga).should.yield(call(fn1)));
 
-    expect(runSaga).toThrow('Assertion failure');
+    expect(error.message).toMatch('Assertion failure');
+    expect(error.callSite).toMatch(RUNNER_CALL_SITE);
   });
 
   test('does not assert that the saga yields an effect without providing an effect argument', () => {
@@ -514,12 +544,14 @@ describe('should.yield()', () => {
       yield call(fn1);
     };
 
-    const runSaga = () =>
+    const error = runAndCatch(() =>
       (createRunner(saga) as SagaRunner & {
         should: { yield: () => SagaRunner };
-      }).should.yield();
+      }).should.yield(),
+    );
 
-    expect(runSaga).toThrow('Missing effect argument');
+    expect(error.message).toMatch('Missing effect argument');
+    expect(error.callSite).toMatch(RUNNER_CALL_SITE);
   });
 });
 
@@ -537,9 +569,12 @@ describe('should.return()', () => {
   });
 
   test('does not assert that the saga returns a value', () => {
-    const runSaga = () => createRunner(saga).should.return('result2');
+    const error = runAndCatch(() =>
+      createRunner(saga).should.return('result2'),
+    );
 
-    expect(runSaga).toThrow('Assertion failure');
+    expect(error.message).toMatch('Assertion failure');
+    expect(error.callSite).toMatch(RUNNER_CALL_SITE);
   });
 
   test('does accept "0" as an argument', () => {
@@ -562,28 +597,30 @@ describe('should.return()', () => {
 describe('should.throw()', () => {
   const saga = function*() {
     yield call(fn1);
-    throw sagaError;
+    throw new UserError('Failure');
   };
 
   test('asserts that the saga throws an error', () => {
     createRunner(saga)
       .catch(Error)
-      .should.throw(sagaError.message);
+      .should.throw('Failure');
   });
 
   test('asserts that the saga does not throw an error', () => {
     createRunner(saga)
-      .catch(sagaError.message)
+      .catch('Failure')
       .should.not.throw('unthrown');
   });
 
   test('does not assert that the saga throws an error', () => {
-    const runSaga = () =>
+    const error = runAndCatch(() =>
       createRunner(saga)
-        .catch(sagaError.message)
-        .should.throw('unthrown');
+        .catch('Failure')
+        .should.throw('unthrown'),
+    );
 
-    expect(runSaga).toThrow('Assertion failure');
+    expect(error.message).toMatch('Assertion failure');
+    expect(error.callSite).toMatch(RUNNER_CALL_SITE);
   });
 
   test('does not assert that the saga throws an error that is not thrown', () => {
@@ -591,22 +628,25 @@ describe('should.throw()', () => {
       yield put({ type: 'SUCCESS' });
     };
 
-    const runSaga = () => createRunner(saga).should.throw(Error);
+    const error = runAndCatch(() => createRunner(saga).should.throw(Error));
 
-    expect(runSaga).toThrow('Assertion failure');
+    expect(error.message).toMatch('Assertion failure');
+    expect(error.callSite).toMatch(RUNNER_CALL_SITE);
   });
 
   test('does not assert that the saga throws an error without providing an error pattern argument', () => {
     const saga = function*() {
-      throw sagaError;
+      throw new UserError('Failure');
     };
 
-    const runSaga = () =>
+    const error = runAndCatch(() =>
       (createRunner(saga) as SagaRunner & {
         should: { throw: () => SagaRunner };
-      }).should.throw();
+      }).should.throw(),
+    );
 
-    expect(runSaga).toThrow('Missing error pattern argument');
+    expect(error.message).toMatch('Missing error pattern argument');
+    expect(error.callSite).toMatch(RUNNER_CALL_SITE);
   });
 });
 
