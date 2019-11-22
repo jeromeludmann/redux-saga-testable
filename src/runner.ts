@@ -3,12 +3,12 @@ import { Effect } from '@redux-saga/types';
 import { stringify } from './stringify';
 import { getExtendedSagaAssertions } from './aliases';
 import {
-  createError,
   matchError,
   next,
   isEffect,
   createAssert,
-  resetOutputCache,
+  RunnerError,
+  defineCallSite,
 } from './utils';
 import {
   SagaRunner,
@@ -52,144 +52,154 @@ export const _map = (runner: SagaRunner, state: SagaRunnerState) => (
   effect: Effect,
   ...values: any[]
 ): SagaRunner => {
-  if (!effect) {
-    throw createError('Missing effect argument', runner.map);
-  }
+  try {
+    if (!effect) {
+      throw new RunnerError('Missing effect argument');
+    }
 
-  if (values.length === 0) {
-    throw createError(
-      `The value to map is missing\n\nGiven effect:\n\n${stringify(effect)}`,
-      runner.map,
+    if (values.length === 0) {
+      throw new RunnerError(
+        `The value to map is missing\n\nGiven effect:\n\n${stringify(effect)}`,
+      );
+    }
+
+    const existingMapping = state.environment.find(mapping =>
+      isDeepStrictEqual(mapping.effect, effect),
     );
+
+    if (existingMapping) {
+      throw new RunnerError(
+        'Mapped values already provided for this effect\n\n' +
+          `Given effect:\n\n${stringify(effect)}\n\n` +
+          `Existing mapped values:\n\n${stringify(existingMapping.values)}`,
+      );
+    }
+
+    state.environment.push({ effect, values });
+    state.output = undefined;
+
+    return runner;
+  } catch (error) {
+    defineCallSite(error, runner.map);
+    throw error;
   }
-
-  const existingMapping = state.environment.find(mapping =>
-    isDeepStrictEqual(mapping.effect, effect),
-  );
-
-  if (existingMapping) {
-    throw createError(
-      'Mapped values already provided for this effect\n\n' +
-        `Given effect:\n\n${stringify(effect)}\n\n` +
-        `Existing mapped values:\n\n${stringify(existingMapping.values)}`,
-      runner.map,
-    );
-  }
-
-  state.environment.push({ effect, values });
-
-  resetOutputCache(state);
-  return runner;
 };
 
 export const _catch = (runner: SagaRunner, state: SagaRunnerState) => (
   pattern: ErrorPattern,
 ) => {
-  if (!pattern) {
-    throw createError('Missing error pattern argument', runner.catch);
+  try {
+    if (!pattern) {
+      throw new RunnerError('Missing error pattern argument');
+    }
+
+    if (state.catchingError) {
+      throw new RunnerError(
+        'Error pattern already provided\n\n' +
+          `Given error pattern:\n\n${stringify(state.catchingError)}`,
+      );
+    }
+
+    state.catchingError = pattern;
+    state.output = undefined;
+
+    return runner;
+  } catch (error) {
+    defineCallSite(error, runner.catch);
+    throw error;
   }
-
-  if (state.catchingError) {
-    throw createError(
-      'Error pattern already provided\n\n' +
-        `Given error pattern:\n\n${stringify(state.catchingError)}`,
-      runner.catch,
-    );
-  }
-
-  state.catchingError = pattern;
-
-  resetOutputCache(state);
-  return runner;
 };
 
 export const _yield = (
   runner: SagaRunner,
   state: SagaRunnerState,
   isNegated: () => boolean,
-  stackFunction?: Function,
 ) => (effect: Effect): SagaRunner => {
-  if (!effect) {
-    throw createError(
-      'Missing effect argument',
-      stackFunction || runner.should.yield,
+  try {
+    if (!effect) {
+      throw new RunnerError('Missing effect argument');
+    }
+
+    const output = _run(runner, state)();
+
+    const assert = createAssert(
+      output => output.effects.some(e => isDeepStrictEqual(e, effect)),
+      isNegated(),
     );
+
+    if (!assert(output)) {
+      throw new RunnerError(
+        'Assertion failure\n\n' +
+          `Expected effect:\n\n${stringify(effect)}\n\n` +
+          `Received effects:\n\n${stringify(output.effects)}`,
+      );
+    }
+
+    return runner;
+  } catch (error) {
+    defineCallSite(error, runner.should.yield);
+    throw error;
   }
-
-  const output = _run(runner, state, stackFunction)();
-
-  const assert = createAssert(
-    output => output.effects.some(e => isDeepStrictEqual(e, effect)),
-    isNegated(),
-  );
-
-  if (!assert(output)) {
-    throw createError(
-      'Assertion failure\n\n' +
-        `Expected effect:\n\n${stringify(effect)}\n\n` +
-        `Received effects:\n\n${stringify(output.effects)}`,
-      stackFunction || runner.should.yield,
-    );
-  }
-
-  return runner;
 };
 
 export const _return = (
   runner: SagaRunner,
   state: SagaRunnerState,
   isNegated: () => boolean,
-  stackFunction?: Function,
 ) => (value: any): SagaRunner => {
-  const output = _run(runner, state, stackFunction)();
+  try {
+    const output = _run(runner, state)();
 
-  const assert = createAssert(
-    output => isDeepStrictEqual(output.return, value),
-    isNegated(),
-  );
-
-  if (!assert(output)) {
-    throw createError(
-      'Assertion failure\n\n' +
-        `Expected return value:\n\n${stringify(value)}\n\n` +
-        `Received return value:\n\n${stringify(output.return)}`,
-      stackFunction || runner.should.return,
+    const assert = createAssert(
+      output => isDeepStrictEqual(output.return, value),
+      isNegated(),
     );
-  }
 
-  return runner;
+    if (!assert(output)) {
+      throw new RunnerError(
+        'Assertion failure\n\n' +
+          `Expected return value:\n\n${stringify(value)}\n\n` +
+          `Received return value:\n\n${stringify(output.return)}`,
+      );
+    }
+
+    return runner;
+  } catch (error) {
+    defineCallSite(error, runner.should.return);
+    throw error;
+  }
 };
 
 export const _throw = (
   runner: SagaRunner,
   state: SagaRunnerState,
   isNegated: () => boolean,
-  stackFunction?: Function,
 ) => (pattern: ErrorPattern): SagaRunner => {
-  if (!pattern) {
-    throw createError(
-      'Missing error pattern argument',
-      stackFunction || runner.should.throw,
+  try {
+    if (!pattern) {
+      throw new RunnerError('Missing error pattern argument');
+    }
+
+    const output = _run(runner, state)();
+
+    const assert = createAssert(
+      output => !!output.error && matchError(output.error, pattern),
+      isNegated(),
     );
+
+    if (!assert(output)) {
+      throw new RunnerError(
+        'Assertion failure\n\n' +
+          `Expected error pattern:\n\n${stringify(pattern)}\n\n` +
+          `Received thrown error:\n\n${stringify(output.error)}`,
+      );
+    }
+
+    return runner;
+  } catch (error) {
+    defineCallSite(error, runner.should.throw);
+    throw error;
   }
-
-  const output = _run(runner, state, stackFunction)();
-
-  const assert = createAssert(
-    output => !!output.error && matchError(output.error, pattern),
-    isNegated(),
-  );
-
-  if (!assert(output)) {
-    throw createError(
-      'Assertion failure\n\n' +
-        `Expected error pattern:\n\n${stringify(pattern)}\n\n` +
-        `Received thrown error:\n\n${stringify(output.error)}`,
-      stackFunction || runner.should.throw,
-    );
-  }
-
-  return runner;
 };
 
 export const _clone = (state: SagaRunnerState) => (): SagaRunner => {
@@ -202,87 +212,88 @@ export const _clone = (state: SagaRunnerState) => (): SagaRunner => {
 export const _run = (
   runner: SagaRunner,
   state: SagaRunnerState,
-  stackFunction?: Function,
 ) => (): SagaOutput => {
-  if (state.output !== undefined) {
-    return state.output;
-  }
-
-  state.output = { effects: [] };
-
-  const iterator = state.saga(...state.arguments);
-  let sagaStep: IteratorResult<any>;
-  let nextValue = undefined;
-
-  // prevents mapping mutation
-  const environment = state.environment.map(mapping => ({
-    ...mapping,
-    values: Array.from(mapping.values),
-  }));
-
-  for (;;) {
-    try {
-      sagaStep = next(iterator, nextValue);
-    } catch (sagaError) {
-      state.output.error = sagaError;
-      break;
+  try {
+    if (state.output !== undefined) {
+      return state.output;
     }
 
-    if (sagaStep.done) {
-      state.output.return = sagaStep.value;
-      break;
+    state.output = { effects: [] };
+
+    const iterator = state.saga(...state.arguments);
+    let sagaStep: IteratorResult<any>;
+    let nextValue = undefined;
+
+    // prevents mapping mutation
+    const environment = state.environment.map(mapping => ({
+      ...mapping,
+      values: Array.from(mapping.values),
+    }));
+
+    for (;;) {
+      try {
+        sagaStep = next(iterator, nextValue);
+      } catch (sagaError) {
+        state.output.error = sagaError;
+        break;
+      }
+
+      if (sagaStep.done) {
+        state.output.return = sagaStep.value;
+        break;
+      }
+
+      if (!isEffect(sagaStep.value)) {
+        nextValue = sagaStep.value;
+        continue;
+      }
+
+      if (state.output.effects.length > 100) {
+        throw new RunnerError('Maximum yielded effects size reached');
+      }
+
+      state.output.effects.push(sagaStep.value);
+
+      // injects the mapped value to the next iteration
+      const mapping = environment.find(mapping =>
+        isDeepStrictEqual(mapping.effect, sagaStep.value),
+      );
+      nextValue = mapping ? mapping.values.shift() : undefined;
     }
 
-    if (!isEffect(sagaStep.value)) {
-      nextValue = sagaStep.value;
-      continue;
-    }
-
-    if (state.output.effects.length > 100) {
-      throw createError(
-        'Maximum yielded effects size reached',
-        stackFunction || runner.run,
+    // checks for unused mapped values
+    const unusedMapping = environment.find(
+      mapping => mapping.values.length > 0,
+    );
+    if (unusedMapping) {
+      throw new RunnerError(
+        'Unused mapped values\n\n' +
+          `Given effect:\n\n${stringify(unusedMapping.effect)}\n\n` +
+          `Unused mapped values:\n\n${stringify(unusedMapping.values)}`,
       );
     }
 
-    state.output.effects.push(sagaStep.value);
-
-    // injects the mapped value to the next iteration
-    const mapping = environment.find(mapping =>
-      isDeepStrictEqual(mapping.effect, sagaStep.value),
-    );
-    nextValue = mapping ? mapping.values.shift() : undefined;
-  }
-
-  // checks for unused mapped values
-  const unusedMapping = environment.find(mapping => mapping.values.length > 0);
-  if (unusedMapping) {
-    throw createError(
-      'Unused mapped values\n\n' +
-        `Given effect:\n\n${stringify(unusedMapping.effect)}\n\n` +
-        `Unused mapped values:\n\n${stringify(unusedMapping.values)}`,
-      stackFunction || runner.run,
-    );
-  }
-
-  // re-throws saga error if needed
-  if (state.output.error) {
-    if (
-      !state.catchingError ||
-      !matchError(state.output.error, state.catchingError)
-    ) {
-      throw state.output.error;
+    // re-throws saga error if needed
+    if (state.output.error) {
+      if (
+        !state.catchingError ||
+        !matchError(state.output.error, state.catchingError)
+      ) {
+        throw state.output.error;
+      }
     }
-  }
 
-  // checks for unused catching error
-  else if (state.catchingError) {
-    throw createError(
-      'No error thrown by the saga\n\n' +
-        `Given error pattern:\n\n${stringify(state.catchingError)}`,
-      stackFunction || runner.run,
-    );
-  }
+    // checks for unused catching error
+    else if (state.catchingError) {
+      throw new RunnerError(
+        'No error thrown by the saga\n\n' +
+          `Given error pattern:\n\n${stringify(state.catchingError)}`,
+      );
+    }
 
-  return state.output;
+    return state.output;
+  } catch (error) {
+    defineCallSite(error, runner.run);
+    throw error;
+  }
 };

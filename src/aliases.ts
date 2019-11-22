@@ -27,6 +27,7 @@ import {
   race,
 } from 'redux-saga/effects';
 import { Effect } from '@redux-saga/types';
+import { defineCallSite } from './utils';
 import { SagaRunner, SagaRunnerState } from './types/runner';
 
 export const getExtendedSagaAssertions = (
@@ -37,13 +38,17 @@ export const getExtendedSagaAssertions = (
     runner: SagaRunner,
     state: SagaRunnerState,
     isNegated: () => boolean,
-    stackFunction?: Function,
   ) => (...args: any[]) => SagaRunner,
 ) => {
   const createAlias = (effectCreator: (...effectArgs: any[]) => Effect) => {
-    const fn = (...effectArgs: any[]) =>
-      _yield(runner, state, isNegated, fn)(effectCreator(...effectArgs));
-    return fn;
+    return function alias(...effectArgs: any[]) {
+      try {
+        return _yield(runner, state, isNegated)(effectCreator(...effectArgs));
+      } catch (error) {
+        defineCallSite(error, alias);
+        throw error;
+      }
+    };
   };
 
   return {

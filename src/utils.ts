@@ -4,7 +4,6 @@ import {
   FINALIZE,
   ErrorPattern,
   SagaOutput,
-  SagaRunnerState,
 } from './types/runner';
 
 export function next<T>(iterator: Iterator<T>, value: any): IteratorResult<T> {
@@ -54,17 +53,16 @@ export function matchError(error: Error, pattern: ErrorPattern): boolean {
   return false;
 }
 
-export function createError(message: string, stackFunction: Function): Error {
-  const error = new Error(message);
-  const limit = Error.stackTraceLimit;
-  Error.stackTraceLimit = 1;
-  Error.captureStackTrace(error, stackFunction);
-  Error.stackTraceLimit = limit;
-  return error;
+export function defineCallSite(error: Error, fn: Function) {
+  if (error.name === RunnerError.name) {
+    Error.captureStackTrace(error, fn);
+  }
 }
 
-export function resetOutputCache(state: SagaRunnerState): void {
-  if (state.output !== undefined) {
-    delete state.output;
+export class RunnerError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = RunnerError.name;
+    Error.captureStackTrace(this, RunnerError);
   }
 }
