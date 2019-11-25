@@ -1,5 +1,5 @@
 import { _createRunner } from './runner';
-import { createError } from './utils';
+import { RunnerError, defineCallSite } from './utils';
 import {
   SagaRunner,
   ThrowError,
@@ -15,15 +15,20 @@ export function createRunner<Saga extends (...args: any[]) => any>(
   saga: Saga,
   ...args: Parameters<Saga>
 ): SagaRunner {
-  if (!saga) {
-    throw createError('Missing saga argument', createRunner);
-  }
+  try {
+    if (!saga) {
+      throw new RunnerError('Missing saga argument');
+    }
 
-  return _createRunner({
-    saga,
-    arguments: args,
-    environment: [],
-  });
+    return _createRunner({
+      saga,
+      arguments: args,
+      environment: [],
+    });
+  } catch (error) {
+    defineCallSite(error, createRunner);
+    throw error;
+  }
 }
 
 /**
@@ -36,14 +41,19 @@ export const use = createRunner;
  * Throws an error from the saga when mapped as a value.
  */
 export function throwError(error: Error): ThrowError {
-  if (!error) {
-    throw createError('Missing error argument', throwError);
-  }
+  try {
+    if (!error) {
+      throw new RunnerError('Missing error argument');
+    }
 
-  return {
-    [THROW_ERROR]: true,
-    error,
-  };
+    return {
+      [THROW_ERROR]: true,
+      error,
+    };
+  } catch (error) {
+    defineCallSite(error, throwError);
+    throw error;
+  }
 }
 
 /**
