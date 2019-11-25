@@ -1,9 +1,12 @@
 # redux-saga-testable
 
 [![npm](https://img.shields.io/npm/v/redux-saga-testable)](https://www.npmjs.com/package/redux-saga-testable)
-[![npm](https://img.shields.io/npm/dt/redux-saga-testable)](https://www.npmjs.com/package/redux-saga-testable)
+![node](https://img.shields.io/node/v/redux-saga-testable)
+![npm peer dependency version](https://img.shields.io/npm/dependency-version/redux-saga-testable/peer/redux)
+![npm peer dependency version](https://img.shields.io/npm/dependency-version/redux-saga-testable/peer/redux-saga)
 [![Travis (.org)](https://img.shields.io/travis/jeromeludmann/redux-saga-testable)](https://travis-ci.org/jeromeludmann/redux-saga-testable)
 [![Coveralls github](https://img.shields.io/coveralls/github/jeromeludmann/redux-saga-testable)](https://coveralls.io/github/jeromeludmann/redux-saga-testable)
+[![npm](https://img.shields.io/npm/dt/redux-saga-testable)](https://www.npmjs.com/package/redux-saga-testable)
 [![NPM](https://img.shields.io/npm/l/redux-saga-testable)](/LICENSE)
 
 Make [redux-saga](https://github.com/redux-saga/redux-saga) more easily testable.
