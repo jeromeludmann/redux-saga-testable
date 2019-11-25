@@ -4,12 +4,14 @@
     "moduleResolution": "node",
     "target": "es2017",
     "lib": ["es2017"],
-    "outDir": "lib",
-    "declaration": true,
-    "declarationDir": "lib",
     "strict": true,
     "noUnusedLocals": true,
-    "noImplicitReturns": true
+    "noImplicitReturns": true,
+    "baseUrl": ".",
+    "paths": {
+      "redux-saga-testable": ["src/main.ts"],
+      "redux-saga-testable/*": ["src/*"]
+    }
   },
-  "include": ["src"]
+  "exclude": ["lib"]
 }

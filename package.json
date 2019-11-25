@@ -2,16 +2,16 @@
   "name": "redux-saga-testable",
   "version": "0.3.1",
   "description": "Make redux-saga more easily testable",
-  "main": "lib/index.js",
-  "types": "lib/index.d.ts",
+  "main": "lib/main.js",
+  "types": "lib/main.d.ts",
   "files": [
     "/lib"
   ],
   "scripts": {
     "test": "jest",
-    "build": "tsc",
-    "type-checking": "tsc --noEmit",
-    "circular-deps": "madge --circular src",
+    "build": "tsc -b tsbuild.json",
+    "type-checking": "tsc -b tscheck.json",
+    "circular-deps": "madge -c src",
     "test-coverage": "npm test -- --coverage",
     "checks": "npm run type-checking && npm run circular-deps && npm run test-coverage",
     "prebuild": "rm -rf lib",

@@ -1,34 +1,15 @@
 import { IO } from '@redux-saga/symbols';
-import {
-  THROW_ERROR,
-  FINALIZE,
-  ErrorPattern,
-  SagaOutput,
-} from './types/runner';
 
-export function next<T>(iterator: Iterator<T>, value: any): IteratorResult<T> {
-  if (value !== null && typeof value === 'object') {
-    if (THROW_ERROR in value) return iterator.throw!(value.error);
-    if (FINALIZE in value) return iterator.return!();
-  }
-
-  return iterator.next(value);
-}
-
-export function isEffect(obj: Object): boolean {
-  return obj !== null && typeof obj === 'object' && IO in obj;
-}
-
-export function createAssert(
-  assert: (output: SagaOutput) => boolean,
-  reverse: boolean,
-): (output: SagaOutput) => boolean {
-  return (output: SagaOutput) => (reverse ? !assert(output) : assert(output));
-}
+export type ErrorPattern =
+  | string
+  | RegExp
+  | Error
+  | { new (...args: any[]): any };
 
 export function matchError(error: Error, pattern: ErrorPattern): boolean {
-  if (typeof error !== 'object') error = { name: '', message: error };
-  if (!error.message) return false;
+  if (typeof error !== 'object') {
+    error = { name: '', message: error };
+  }
 
   if (typeof pattern === 'string' && error.message.includes(pattern)) {
     return true;
@@ -53,16 +34,6 @@ export function matchError(error: Error, pattern: ErrorPattern): boolean {
   return false;
 }
 
-export function defineCallSite(error: Error, fn: Function) {
-  if (error.name === RunnerError.name) {
-    Error.captureStackTrace(error, fn);
-  }
-}
-
-export class RunnerError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = RunnerError.name;
-    Error.captureStackTrace(this, RunnerError);
-  }
+export function isEffect(obj: any) {
+  return obj !== null && typeof obj === 'object' && IO in obj;
 }

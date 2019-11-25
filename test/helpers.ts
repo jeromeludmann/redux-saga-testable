@@ -1,3 +1,7 @@
+export const fn1 = () => {};
+export const fn2 = () => {};
+export const fn3 = () => {};
+
 export const RUNNER_CALL_SITE = /^ *at .*\/test\/.+\.test\.ts:\d+:\d+.*$/;
 export const USER_CALL_SITE = /^ *at \[USER CALL SITE\]$/;
 
@@ -7,7 +11,7 @@ export function runAndCatch(fn: Function): Error & { callSite: string } {
     throw new Error('No error thrown from the given function');
   } catch (error) {
     (error as ReturnType<typeof runAndCatch>).callSite =
-      getCallSite(error.stack) || '';
+      getCallSite(error.stack) ?? '';
     return error;
   }
 }
