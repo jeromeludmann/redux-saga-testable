@@ -26,29 +26,25 @@ function* fetchUserWorker(action: FetchUserAction) {
   yield put({ type: 'FETCH_USER_REQUEST' });
 
   let user = yield select(selectors.getCurrentUser);
-  if (user === undefined) {
-    user = yield call(services.getUserById, userId);
-  }
+  if (user !== undefined) return;
 
+  user = yield call(services.getUserById, userId);
   yield put({ type: 'FETCH_USER_SUCCESS', payload: user });
 }
 ```
 
-This saga fetches a user and dispatches `FETCH_USER_SUCCESS`. Note that if the user already exists, it reuses the existing value returned by `selectors.getCurrentUser()` instead of calling `services.getUserById()`.
+This saga fetches a user and dispatches `FETCH_USER_SUCCESS`. Note that if the user already exists, it does nothing instead of calling `services.getUserById()`.
 
 You would like to assert that this saga dispatches the action `FETCH_USER_SUCCESS` when the call to `services.getUserById()` returns a user:
 
 ```ts
 import { createRunner } from 'redux-saga-testable';
 
-test('fetchUserWorker() should dispatch FETCH_USER_SUCCESS if services.getUserById() returns a user', () => {
+test('fetchUserWorker() should dispatch FETCH_USER_SUCCESS', () => {
   const userId = 123;
   const user = { user: 'name' };
 
-  createRunner(fetchUserWorker, {
-    type: 'FETCH_USER',
-    payload: { userId },
-  })
+  createRunner(fetchUserWorker, { type: 'FETCH_USER', payload: { userId } })
     .map(call(services.getUserById, userId), user)
     .should.put({ type: 'FETCH_USER_SUCCESS', payload: user });
 });
@@ -56,68 +52,60 @@ test('fetchUserWorker() should dispatch FETCH_USER_SUCCESS if services.getUserBy
 
 Let's see what happens step by step:
 
-> ```code
-> import { createRunner } from 'redux-saga-testable';
-> ```
->
-> Imports the saga runner creator function.
->
-> ```code
-> createRunner(fetchUserWorker, {
->   type: 'FETCH_USER',
->   payload: { userId: userId },
-> })
-> ```
->
-> Creates a saga runner instance from the saga `fetchUserWorker` and its action.
->
-> ```code
-> .map(call(services.getUserById, userId), user)
-> ```
->
-> Maps the effect `call(services.getUserById, id)` to the value `user`.
->
-> ```code
-> .should.put({ type: 'FETCH_USER_SUCCESS', payload: user });
-> ```
->
-> Asserts that the saga yields the effect `put({ type: 'FETCH_USER_SUCCESS', payload: user })`.
+- ```code
+  import { createRunner } from 'redux-saga-testable';
+  ```
+
+  Imports the saga runner creator function.
+
+- ```code
+  createRunner(fetchUserWorker, { type: 'FETCH_USER', payload: { userId } })
+  ```
+
+  Creates a saga runner instance from the saga `fetchUserWorker` and its action.
+
+- ```code
+  .map(call(services.getUserById, userId), user)
+  ```
+
+  Maps the effect `call(services.getUserById, id)` to the value `user`.
+
+- ```code
+  .should.put({ type: 'FETCH_USER_SUCCESS', payload: user });
+  ```
+
+  Asserts that the saga yields the effect `put({ type: 'FETCH_USER_SUCCESS', payload: user })`.
 
 The test will pass if the runner can make the given assertions. Otherwise an error will be thrown and the test will fail.
 
-Now, you would like to ensure that the saga does not call `services.getUserById()` if the user already exists:
+Now, you would like to ensure that the saga does not make the request to `services.getUserById()` if the user already exists:
 
 ```ts
-test('fetchUserWorker() should not call services.getUserById() if the user already exists', () => {
+test('fetchUserWorker() should not make the request if the user already exists', () => {
   const userId = 123;
-  const user = { user: 'name' };
+  const existingUser = { user: 'name' };
 
-  createRunner(fetchUserWorker, {
-    type: 'FETCH_USER',
-    payload: { userId },
-  })
-    .map(select(selectors.getCurrentUser), user)
-    .should.not.call(services.getUserById, userId)
-    .should.put({ type: 'FETCH_USER_SUCCESS', payload: user });
+  createRunner(fetchUserWorker, { type: 'FETCH_USER', payload: { userId } })
+    .map(select(selectors.getCurrentUser), existingUser)
+    .should.not.call(services.getUserById, userId);
 });
 ```
 
-By mapping `select(selectors.getCurrentUser)` to a user value, you have the ability to act on the saga behavior in order to simulate an already existing user.
+By mapping the effect `select(selectors.getCurrentUser)` to the value `existingUser`, you have the ability to act on the saga behavior in order to simulate an already existing user.
 
 Explanations:
 
-> ```code
-> .map(select(selectors.getCurrentUser), user)
-> ```
->
-> Maps the effect `select(selectors.getCurrentUser)` to the value `user`.
->
-> ```code
-> .should.not.call(services.getUserById, userId)
-> .should.put({ type: 'FETCH_USER_SUCCESS', payload: user });
-> ```
->
-> Asserts that the saga does not yield the effect `call(services.getUserById, userId)` and yields anyway the effect `put({ type: 'FETCH_USER_SUCCESS', payload: user })`.
+- ```code
+  .map(select(selectors.getCurrentUser), existingUser)
+  ```
+
+  Maps the effect `select(selectors.getCurrentUser)` to the value `user`.
+
+- ```code
+  .should.not.call(services.getUserById, userId);
+  ```
+
+  Asserts that the saga does not yield the effect `call(services.getUserById, userId)`.
 
 The order of the assertions does not matter.
 
@@ -158,17 +146,17 @@ test('fetchUserWorker() should dispatch FETCH_USER_FAILURE if services.getUserBy
 
 Explanations:
 
-> ```code
-> import { throwError } from 'redux-saga-testable';
-> ```
->
-> Imports the helper `throwError()`.
->
-> ```code
-> .map(call(services.getUserById, id), throwError(error))
-> ```
->
-> Uses the helper by wrapping an `error` to create a thrown error and uses it as a mapped value.
+- ```code
+  import { throwError } from 'redux-saga-testable';
+  ```
+
+  Imports the helper `throwError()`.
+
+- ```code
+  .map(call(services.getUserById, id), throwError(error))
+  ```
+
+  Uses the helper by wrapping an `error` to create a thrown error and uses it as a mapped value.
 
 [`throwError()`][throwerror] is an helper that tells the runner you want to throw an error when the saga yields the given effect, instead of just assigning a simple value as a result of the effect.
 
@@ -257,17 +245,17 @@ test('notifyWatcher() should dispatch NOTIFY_END', () => {
 
 Explanations:
 
-> ```code
-> import { finalize } from 'redux-saga-testable';
-> ```
->
-> Imports the helper `finalize()`.
->
-> ```code
-> .map(call(services.notify), finalize())
-> ```
->
-> Uses the helper `finalize()` as a mapped value to break the infinite loop that will end the saga.
+- ```code
+  import { finalize } from 'redux-saga-testable';
+  ```
+
+  Imports the helper `finalize()`.
+
+- ```code
+  .map(call(services.notify), finalize())
+  ```
+
+  Uses the helper `finalize()` as a mapped value to break the infinite loop that will end the saga.
 
 `finalize()` will break the infinite loop and the saga will be finalized. When a saga is finalized, it will reach its the next `finally` block before to terminate completely.
 
@@ -303,17 +291,17 @@ test('findProduct() should throw an error when a negative id is given', () => {
 
 Explanations:
 
-> ```code
-> .catch(Error)
-> ```
->
-> Catches silently (swallow) errors that inherit from `Error`.
->
-> ```code
-> .should.throw(/^Unable to find product/);
-> ```
->
-> Asserts that the saga throws an error that matches the pattern `/^Unable to find product/`.
+- ```code
+  .catch(Error)
+  ```
+
+  Catches silently (swallow) errors that inherit from `Error`.
+
+- ```code
+  .should.throw(/^Unable to find product/);
+  ```
+
+  Asserts that the saga throws an error that matches the pattern `/^Unable to find product/`.
 
 The runner will catch the error thrown by the saga and will record it under the key `error` of the [`SagaOutput`][sagaoutput] object. Since it will not rethrow the error, the test will not fail. Now you are able to make your assertions although the saga throwing an error.
 
@@ -356,11 +344,11 @@ test('sendPingWorker() should dispatch RECEIVE_PONG with different results', () 
 
 Explanations:
 
-> ```code
-> .map(call(services.ping), 12, 10, 11)
-> ```
->
-> Maps the effect `call(services.ping)` to three different values: `12`, `10` and `11`.
+- ```code
+  .map(call(services.ping), 12, 10, 11)
+  ```
+
+  Maps the effect `call(services.ping)` to three different values: `12`, `10` and `11`.
 
 The runner will sequentially map the effect `call(services.ping)` to values `12`, `10` and `11`. Note here that the order of given arguments matters.
 
@@ -370,9 +358,7 @@ In order to have more concise tests, this feature allows to manage multiple runn
 
 When [`runner.clone()`][runner.clone] is invoked, a new [`SagaRunner`][sagarunner] is created from the existing one. It is no longer required to redo effect mapping (or catch error) again.
 
-WIP
-
-You can [see this use case here](/test).
+You can [see more details here][runner.clone].
 
 [createrunner]: /docs/api.md#createrunnersaga--args
 [runner.map]: /docs/api.md#runnermapeffect-value--nextvalues

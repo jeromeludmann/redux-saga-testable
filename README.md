@@ -67,29 +67,25 @@ function* fetchUserWorker(action: FetchUserAction) {
   yield put({ type: 'FETCH_USER_REQUEST' });
 
   let user = yield select(selectors.getCurrentUser);
-  if (user === undefined) {
-    user = yield call(services.getUserById, userId);
-  }
+  if (user !== undefined) return;
 
+  user = yield call(services.getUserById, userId);
   yield put({ type: 'FETCH_USER_SUCCESS', payload: user });
 }
 ```
 
-This saga fetches a user and dispatches `FETCH_USER_SUCCESS`. Note that if the user already exists, it reuses the existing value returned by `selectors.getCurrentUser()` instead of calling `services.getUserById()`.
+This saga fetches a user and dispatches `FETCH_USER_SUCCESS`. Note that if the user already exists, it does nothing instead of calling `services.getUserById()`.
 
 You would like to assert that this saga dispatches the action `FETCH_USER_SUCCESS` when the call to `services.getUserById()` returns a user:
 
 ```ts
 import { createRunner } from 'redux-saga-testable';
 
-test('fetchUserWorker() should dispatch FETCH_USER_SUCCESS if services.getUserById() returns a user', () => {
+test('fetchUserWorker() should dispatch FETCH_USER_SUCCESS', () => {
   const userId = 123;
   const user = { user: 'name' };
 
-  createRunner(fetchUserWorker, {
-    type: 'FETCH_USER',
-    payload: { userId },
-  })
+  createRunner(fetchUserWorker, { type: 'FETCH_USER', payload: { userId } })
     .map(call(services.getUserById, userId), user)
     .should.put({ type: 'FETCH_USER_SUCCESS', payload: user });
 });
@@ -97,32 +93,29 @@ test('fetchUserWorker() should dispatch FETCH_USER_SUCCESS if services.getUserBy
 
 Let's see what happens step by step:
 
-> ```code
-> import { createRunner } from 'redux-saga-testable';
-> ```
->
-> Imports the saga runner creator function.
->
-> ```code
-> createRunner(fetchUserWorker, {
->   type: 'FETCH_USER',
->   payload: { userId: userId },
-> })
-> ```
->
-> Creates a saga runner instance from the saga `fetchUserWorker` and its action.
->
-> ```code
-> .map(call(services.getUserById, userId), user)
-> ```
->
-> Maps the effect `call(services.getUserById, id)` to the value `user`.
->
-> ```code
-> .should.put({ type: 'FETCH_USER_SUCCESS', payload: user });
-> ```
->
-> Asserts that the saga yields the effect `put({ type: 'FETCH_USER_SUCCESS', payload: user })`.
+- ```code
+  import { createRunner } from 'redux-saga-testable';
+  ```
+
+  Imports the saga runner creator function.
+
+- ```code
+  createRunner(fetchUserWorker, { type: 'FETCH_USER', payload: { userId } })
+  ```
+
+  Creates a saga runner instance from the saga `fetchUserWorker` and its action.
+
+- ```code
+  .map(call(services.getUserById, userId), user)
+  ```
+
+  Maps the effect `call(services.getUserById, id)` to the value `user`.
+
+- ```code
+  .should.put({ type: 'FETCH_USER_SUCCESS', payload: user });
+  ```
+
+  Asserts that the saga yields the effect `put({ type: 'FETCH_USER_SUCCESS', payload: user })`.
 
 The test will pass if the runner can make the given assertions. Otherwise an error will be thrown and the test will fail.
 

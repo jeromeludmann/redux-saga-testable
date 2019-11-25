@@ -29,36 +29,28 @@ function* fetchUserWorker(action: FetchUserAction) {
   yield put({ type: 'FETCH_USER_REQUEST' });
 
   let user = yield select(selectors.getCurrentUser);
-  if (user === undefined) {
-    user = yield call(services.getUserById, userId);
-  }
+  if (user !== undefined) return;
 
+  user = yield call(services.getUserById, userId);
   yield put({ type: 'FETCH_USER_SUCCESS', payload: user });
 }
 
-test('fetchUserWorker() should dispatch FETCH_USER_SUCCESS if services.getUserById() returns a user', () => {
+test('fetchUserWorker() should dispatch FETCH_USER_SUCCESS', () => {
   const userId = 123;
   const user = { user: 'name' };
 
-  createRunner(fetchUserWorker, {
-    type: 'FETCH_USER',
-    payload: { userId },
-  })
+  createRunner(fetchUserWorker, { type: 'FETCH_USER', payload: { userId } })
     .map(call(services.getUserById, userId), user)
     .should.put({ type: 'FETCH_USER_SUCCESS', payload: user });
 });
 
-test('fetchUserWorker() should not call services.getUserById() if the user already exists', () => {
+test('fetchUserWorker() should not make the request if the user already exists', () => {
   const userId = 123;
-  const user = { user: 'name' };
+  const existingUser = { user: 'name' };
 
-  createRunner(fetchUserWorker, {
-    type: 'FETCH_USER',
-    payload: { userId },
-  })
-    .map(select(selectors.getCurrentUser), user)
-    .should.not.call(services.getUserById, userId)
-    .should.put({ type: 'FETCH_USER_SUCCESS', payload: user });
+  createRunner(fetchUserWorker, { type: 'FETCH_USER', payload: { userId } })
+    .map(select(selectors.getCurrentUser), existingUser)
+    .should.not.call(services.getUserById, userId);
 });
 
 test('fetchUserWorker() with your own assertions', () => {
