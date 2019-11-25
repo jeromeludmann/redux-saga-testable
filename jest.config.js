@@ -4,7 +4,11 @@ module.exports = {
   transform: { '^.+\\.ts$': 'ts-jest' },
   testRegex: '^.+\\/test\\/.+\\.test\\.ts$',
   moduleFileExtensions: ['ts', 'js'],
-  coverageReporters: ['text', 'html', 'lcov'],
+  coverageReporters: ['text', 'lcov'],
   coverageThreshold: { global: { statements: 100, branches: 100 } },
   collectCoverageFrom: ['src/**/*.ts'],
+  moduleNameMapper: {
+    '^redux-saga-testable$': '<rootDir>/src/main.ts',
+    '^redux-saga-testable/(.*)$': '<rootDir>/src/$1',
+  },
 };

@@ -1,49 +1,58 @@
 # redux-saga-testable
 
-[![npm](https://img.shields.io/npm/v/redux-saga-testable)](https://www.npmjs.com/package/redux-saga-testable)
+[![npm](https://img.shields.io/npm/v/redux-saga-testable)][redux-saga-testable]
 ![node](https://img.shields.io/node/v/redux-saga-testable)
-![npm peer dependency version](https://img.shields.io/npm/dependency-version/redux-saga-testable/peer/redux)
-![npm peer dependency version](https://img.shields.io/npm/dependency-version/redux-saga-testable/peer/redux-saga)
-[![Travis (.org)](https://img.shields.io/travis/jeromeludmann/redux-saga-testable)](https://travis-ci.org/jeromeludmann/redux-saga-testable)
-[![Coveralls github](https://img.shields.io/coveralls/github/jeromeludmann/redux-saga-testable)](https://coveralls.io/github/jeromeludmann/redux-saga-testable)
-[![npm](https://img.shields.io/npm/dt/redux-saga-testable)](https://www.npmjs.com/package/redux-saga-testable)
-[![NPM](https://img.shields.io/npm/l/redux-saga-testable)](/LICENSE)
+![peer](https://img.shields.io/npm/dependency-version/redux-saga-testable/peer/redux)
+![peer](https://img.shields.io/npm/dependency-version/redux-saga-testable/peer/redux-saga)
+[![travis](https://img.shields.io/travis/jeromeludmann/redux-saga-testable)](https://travis-ci.org/jeromeludmann/redux-saga-testable)
+[![coveralls](https://img.shields.io/coveralls/github/jeromeludmann/redux-saga-testable)](https://coveralls.io/github/jeromeludmann/redux-saga-testable)
+![downloads](https://img.shields.io/npm/dt/redux-saga-testable)
+![license](https://img.shields.io/npm/l/redux-saga-testable)
 
-Make [redux-saga](https://github.com/redux-saga/redux-saga) more easily testable.
-
-## Features
-
-- Runs sagas without iterating manually
-- Allows to map effects to values
-- Provides built-in effect assertions
-- Works with snapshot testing
-- Supports TypeScript
-
-## Contents
-
-- [Overview](#overview)
-- [Getting started](#getting-started)
-- [Contribute](#contribute)
-- [License](#license)
-
-## Documentation
-
-- [Tutorial][tutorial]
-- [API][api]
+Make [redux-saga] more easily testable.
 
 ## Overview
 
-It's about [redux-saga](https://github.com/redux-saga/redux-saga) and unit tests.
+**redux-saga-testable** is a unit test library for [redux-saga] that runs your
+sagas **without the need to iterate** on the generators yourself, allowing you
+to **map some effects to values** and providing the **built-in assertions** you
+need.
 
-When you write unit tests of sagas, you have to manually iterate on the generator and pass your next value for each yielded effect. The number of iterations you have to `next()` depends on the number of `yield` in the saga.
+## Contents
 
-If a `yield` statement is added, removed or just swapped with another, there is a good chance that you pass your next value to an unexpected effect. This causes tests boring to write, not easy to understand and too prone to breaking.
+- [Motivation]
+- [Getting started]
+- [Contribute]
+- [License]
 
-Ideally, you should not have to worry about what the saga does behind. You would just like to map some effects to some values and assert that some arbitrary effects happened, in a clear and concise way.
+## Documentation
 
-**redux-saga-testable** could help you. It runs your sagas without the need to iterate on the generator yourself, allows you to map effects to values and provides the assertions you need.
+- [Tutorial]
+- [API]
+
+## Motivation
+
+It's about [redux-saga] and unit tests.
+
+When you write unit tests of sagas, you have to manually iterate on the
+generator and pass your next value for each yielded effect. The number of
+iterations you have to `next()` depends on the number of `yield` in the saga.
+
+If a `yield` statement is added, removed or just swapped with another, there is
+a good chance that you pass your next value to an unexpected effect. This causes
+tests boring to write, not easy to understand and too prone to breaking.
+
+Ideally, you should not have to worry about what the saga does behind. You would
+just like to map some effects to some values and assert that some arbitrary
+effects happened, in a clear and concise way.
+
+If that speaks to you, go to [Getting started].
 
 ## Getting started
+
+### Requirements
+
+[Node.js] >=8.10.0 is required to use this library.
 
 ### Install
 
@@ -77,9 +86,12 @@ function* fetchUserWorker(action: FetchUserAction) {
 }
 ```
 
-This saga fetches a user and dispatches `FETCH_USER_SUCCESS`. Note that if the user already exists, it does nothing instead of calling `services.getUserById()`.
+This saga fetches a user and dispatches `FETCH_USER_SUCCESS`. Note that if the
+user already exists, it does nothing instead of calling
+`services.getUserById()`.
 
-You would like to assert that this saga dispatches the action `FETCH_USER_SUCCESS` when the call to `services.getUserById()` returns a user:
+You would like to assert that this saga dispatches the action
+`FETCH_USER_SUCCESS` when the call to `services.getUserById()` returns a user:
 
 ```ts
 import { createRunner } from 'redux-saga-testable';
@@ -118,23 +130,37 @@ Let's see what happens step by step:
   .should.put({ type: 'FETCH_USER_SUCCESS', payload: user });
   ```
 
-  Asserts that the saga yields the effect `put({ type: 'FETCH_USER_SUCCESS', payload: user })`.
+  Asserts that the saga yields the effect
+  `put({ type: 'FETCH_USER_SUCCESS', payload: user })`.
 
-The test will pass if the runner can make the given assertions. Otherwise an error will be thrown and the test will fail.
+The test will pass if the runner can make the given assertions. Otherwise an
+error will be thrown and the test will fail.
 
-**See the [tutorial][tutorial] for more advanced examples or see the [API documentation][api].**
+**See the [Tutorial] for more advanced examples or see the [API]
+documentation.**
 
 ## Contribute
 
 Pull requests are welcome.
 
-To make one, fork this repository, clone it to your local and run `npm install`. Do your changes. Once you are done, commit and push to your forked repository and make your pull request.
+To make one, fork this repository, clone it to your local and run `npm install`.
+Do your changes. Once you are done, commit and push to your forked repository
+and make your pull request.
 
-See current [issues](https://github.com/jeromeludmann/redux-saga-testable/issues) but feel free to bring what you need.
+See current [issues] but feel free to bring what you need.
 
 ## License
 
 MIT
 
+[motivation]: #motivation
+[getting started]: #getting-started
+[contribute]: #contribute
+[license]: #license
 [api]: docs/api.md
 [tutorial]: docs/tutorial.md
+[node.js]: https://nodejs.org/
+[redux]: https://github.com/reduxjs/redux
+[redux-saga]: https://github.com/redux-saga/redux-saga
+[redux-saga-testable]: https://www.npmjs.com/package/redux-saga-testable
+[issues]: https://github.com/jeromeludmann/redux-saga-testable/issues

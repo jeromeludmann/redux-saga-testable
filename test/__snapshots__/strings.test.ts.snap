@@ -1,0 +1,113 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`stringify() Map 1`] = `"  [object Map]"`;
+
+exports[`stringify() Symbol 1`] = `
+"  {
+    Symbol(key): {
+      symbol: Symbol(value)
+    }
+  }"
+`;
+
+exports[`stringify() anonymous function 1`] = `"  ƒ <anonymous>"`;
+
+exports[`stringify() array with custom spaces 1`] = `
+"  [
+    \\"value1\\",
+    \\"value2\\",
+    \\"value3\\"
+  ]"
+`;
+
+exports[`stringify() array with custom spaces 2`] = `
+"    [
+        \\"value1\\",
+        \\"value2\\",
+        \\"value3\\"
+    ]"
+`;
+
+exports[`stringify() array with depth level 1`] = `
+"  [
+    [
+      [
+        […] (1)
+      ]
+    ]
+  ]"
+`;
+
+exports[`stringify() array with depth level 2`] = `
+"  [
+    [
+      [
+        [
+          [
+            [
+              \\"phew!\\"
+            ]
+          ]
+        ]
+      ]
+    ]
+  ]"
+`;
+
+exports[`stringify() empty array 1`] = `"  []"`;
+
+exports[`stringify() empty object 1`] = `"  {}"`;
+
+exports[`stringify() named function 1`] = `"  ƒ fn"`;
+
+exports[`stringify() null 1`] = `"  null"`;
+
+exports[`stringify() number 1`] = `"  123"`;
+
+exports[`stringify() object with custom spaces 1`] = `
+"  {
+    key1: \\"value1\\",
+    key2: \\"value2\\",
+    key3: \\"value3\\"
+  }"
+`;
+
+exports[`stringify() object with custom spaces 2`] = `
+"    {
+        key1: \\"value1\\",
+        key2: \\"value2\\",
+        key3: \\"value3\\"
+    }"
+`;
+
+exports[`stringify() object with depth level 1`] = `
+"  {
+    key1: {
+      key2: {
+        key3: {…} (1)
+      }
+    }
+  }"
+`;
+
+exports[`stringify() object with depth level 2`] = `
+"  {
+    key1: {
+      key2: {
+        key3: {
+          key4: {
+            key5: {
+              key6: \\"phew!\\"
+            }
+          }
+        }
+      }
+    }
+  }"
+`;
+
+exports[`stringify() regexp 1`] = `"  /^regexp$/"`;
+
+exports[`stringify() string 1`] = `"  \\"string\\""`;
+
+exports[`stringify() undefined 1`] = `"  undefined"`;

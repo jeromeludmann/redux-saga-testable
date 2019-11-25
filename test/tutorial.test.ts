@@ -1,6 +1,6 @@
 import { Action } from 'redux';
 import { select, put, call, take, delay } from 'redux-saga/effects';
-import { createRunner, throwError, finalize } from '../src';
+import { createRunner, throwError, finalize } from 'redux-saga-testable';
 
 interface FetchUserAction extends Action<'FETCH_USER'> {
   payload: { userId: number };
