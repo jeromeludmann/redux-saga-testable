@@ -255,9 +255,9 @@ Explanations:
   .map(call(services.notify), finalize())
   ```
 
-  Uses the helper `finalize()` as a mapped value to break the infinite loop that will end the saga.
+  Uses the helper as a mapped value to break the infinite loop that will end the saga.
 
-`finalize()` will break the infinite loop and the saga will be finalized. When a saga is finalized, it will reach its the next `finally` block before to terminate completely.
+[`finalize()`][finalize] will break the infinite loop and the saga will be finalized. When a saga is finalized, it will reach its the next `finally` block before to terminate completely.
 
 ## Catch silently an error thrown by a saga
 
