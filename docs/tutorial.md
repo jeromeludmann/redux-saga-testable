@@ -360,16 +360,16 @@ When [`runner.clone()`][runner.clone] is invoked, a new [`SagaRunner`][sagarunne
 
 You can [see more details here][runner.clone].
 
-[createrunner]: /docs/api.md#createrunnersaga--args
-[runner.map]: /docs/api.md#runnermapeffect-value--nextvalues
-[runner.catch]: /docs/api.md#runnercatcherror
-[runner.clone]: /docs/api.md#runnerclone
-[runner.run]: /docs/api.md#runnerrun
-[runner.should.yield]: /docs/api.md#runnershouldyieldeffect
-[runner.should.return]: /docs/api.md#runnershouldreturnvalue
-[runner.should.throw]: /docs/api.md#runnershouldthrowerror
-[throwerror]: /docs/api.md#throwerrorerror
-[finalize]: /docs/api.md#finalize
-[sagarunner]: /docs/api.md#sagarunner
-[sagaassertions]: /docs/api.md#sagaassertions
-[sagaoutput]: /docs/api.md#sagaoutput
+[createrunner]: api.md#createrunnersaga--args
+[runner.map]: api.md#runnermapeffect-value--nextvalues
+[runner.catch]: api.md#runnercatcherror
+[runner.clone]: api.md#runnerclone
+[runner.run]: api.md#runnerrun
+[runner.should.yield]: api.md#runnershouldyieldeffect
+[runner.should.return]: api.md#runnershouldreturnvalue
+[runner.should.throw]: api.md#runnershouldthrowerror
+[throwerror]: api.md#throwerrorerror
+[finalize]: api.md#finalize
+[sagarunner]: api.md#sagarunner
+[sagaassertions]: api.md#sagaassertions
+[sagaoutput]: api.md#sagaoutput

@@ -136,5 +136,5 @@ See current [issues](https://github.com/jeromeludmann/redux-saga-testable/issues
 
 MIT
 
-[api]: /docs/api.md
-[tutorial]: /docs/tutorial.md
+[api]: docs/api.md
+[tutorial]: docs/tutorial.md
