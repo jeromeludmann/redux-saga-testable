@@ -413,13 +413,10 @@ You can [see more details here][runner.clone].
 [use your own assertion way]: #use-your-own-assertion-way
 [use snapshot testing]: #use-snapshot-testing
 [break an infinite loop]: #break-an-infinite-loop
-[catch silently an error thrown by a saga]:
-  #catch-silently-an-error-thrown-by-a-saga
-[map an effect that is yielded several times]:
-  #map-an-effect-that-is-yielded-several-times
+[catch silently an error thrown by a saga]: #catch-silently-an-error-thrown-by-a-saga
+[map an effect that is yielded several times]: #map-an-effect-that-is-yielded-several-times
 [clone a saga runner instance]: #clone-a-saga-runner-instance
-[cloneablegenerator]:
-  https://github.com/redux-saga/redux-saga/tree/master/docs/api#cloneablegeneratorgeneratorfunc
+[cloneablegenerator]: https://github.com/redux-saga/redux-saga/tree/master/docs/api#cloneablegeneratorgeneratorfunc
 [createrunner]: api.md#createrunnersaga--args
 [runner]: api.md#runner
 [runner.map]: api.md#runnermapeffect-value--nextvalues

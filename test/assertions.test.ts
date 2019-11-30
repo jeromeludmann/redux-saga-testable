@@ -31,7 +31,18 @@ describe('runner.should.yield()', () => {
       createRunner(saga).should.yield(effects.call(fn1)),
     );
 
-    expect(error.message).toMatch('Assertion failure');
+    expect(error.message).toMatch('Assertion failure\n\nExpected');
+    expect(error.callSite).toMatch(RUNNER_CALL_SITE);
+  });
+
+  test('does not assert that the saga does not yield an effect', () => {
+    const error = runAndCatch(() =>
+      createRunner(saga).should.not.yield(
+        effects.put({ type: 'SUCCESS', payload: 'result' }),
+      ),
+    );
+
+    expect(error.message).toMatch('Assertion failure\n\nNot expected');
     expect(error.callSite).toMatch(RUNNER_CALL_SITE);
   });
 
@@ -65,7 +76,16 @@ describe('runner.should.return()', () => {
       createRunner(saga).should.return('result2'),
     );
 
-    expect(error.message).toMatch('Assertion failure');
+    expect(error.message).toMatch('Assertion failure\n\nExpected');
+    expect(error.callSite).toMatch(RUNNER_CALL_SITE);
+  });
+
+  test('does not assert that the saga does not return a value', () => {
+    const error = runAndCatch(() =>
+      createRunner(saga).should.not.return('result1'),
+    );
+
+    expect(error.message).toMatch('Assertion failure\n\nNot expected');
     expect(error.callSite).toMatch(RUNNER_CALL_SITE);
   });
 
@@ -122,7 +142,18 @@ describe('runner.should.throw()', () => {
         .should.throw('unthrown'),
     );
 
-    expect(error.message).toMatch('Assertion failure');
+    expect(error.message).toMatch('Assertion failure\n\nExpected');
+    expect(error.callSite).toMatch(RUNNER_CALL_SITE);
+  });
+
+  test('does not assert that the saga does not throw an error', () => {
+    const error = runAndCatch(() =>
+      createRunner(saga)
+        .catch('Failure')
+        .should.not.throw('Failure'),
+    );
+
+    expect(error.message).toMatch('Assertion failure\n\nNot expected');
     expect(error.callSite).toMatch(RUNNER_CALL_SITE);
   });
 
@@ -133,7 +164,7 @@ describe('runner.should.throw()', () => {
 
     const error = runAndCatch(() => createRunner(saga).should.throw(Error));
 
-    expect(error.message).toMatch('Assertion failure');
+    expect(error.message).toMatch('Assertion failure\n\nExpected');
     expect(error.callSite).toMatch(RUNNER_CALL_SITE);
   });
 

@@ -55,11 +55,10 @@ export class Assertions<R extends Engine> {
       }
 
       const output = this.runner.run();
-      const assertion = output.effects.some(e => isDeepStrictEqual(e, effect));
 
-      if (this.negated ? assertion : !assertion) {
+      if (this.assert(output.effects.some(e => isDeepStrictEqual(e, effect)))) {
         throw new RunnerError('Assertion failure', [
-          'Expected effect:',
+          `${this.expected} effect:`,
           effect,
           'Received effects:',
           output.effects,
@@ -85,11 +84,10 @@ export class Assertions<R extends Engine> {
       }
 
       const output = this.runner.run();
-      const assertion = isDeepStrictEqual(output.return, value);
 
-      if (this.negated ? assertion : !assertion) {
+      if (this.assert(isDeepStrictEqual(output.return, value))) {
         throw new RunnerError('Assertion failure', [
-          'Expected return value:',
+          `${this.expected} return value:`,
           value,
           'Received return value:',
           output.return,
@@ -115,11 +113,10 @@ export class Assertions<R extends Engine> {
       }
 
       const output = this.runner.run();
-      const assertion = !!output.error && matchError(output.error, error);
 
-      if (this.negated ? assertion : !assertion) {
+      if (this.assert(!!output.error && matchError(output.error, error))) {
         throw new RunnerError('Assertion failure', [
-          'Expected error pattern:',
+          `${this.expected} error pattern:`,
           error,
           'Received thrown error:',
           output.error,
@@ -141,6 +138,14 @@ export class Assertions<R extends Engine> {
   get not(): Omit<Assertions<R>, 'not'> {
     this.negated = true;
     return this;
+  }
+
+  private assert(assertion: boolean) {
+    return this.negated ? assertion : !assertion;
+  }
+
+  private get expected() {
+    return this.negated ? 'Not expected' : 'Expected';
   }
 
   private createAlias(effectCreator: (...args: any[]) => Effect) {
