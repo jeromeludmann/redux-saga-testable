@@ -56,7 +56,9 @@ export class Assertions<R extends Engine> {
 
       const output = this.runner.run();
 
-      if (this.assert(output.effects.some(e => isDeepStrictEqual(e, effect)))) {
+      if (
+        !this.assert(output.effects.some(e => isDeepStrictEqual(e, effect)))
+      ) {
         throw new RunnerError('Assertion failure', [
           `${this.expected} effect:`,
           effect,
@@ -85,7 +87,7 @@ export class Assertions<R extends Engine> {
 
       const output = this.runner.run();
 
-      if (this.assert(isDeepStrictEqual(output.return, value))) {
+      if (!this.assert(isDeepStrictEqual(output.return, value))) {
         throw new RunnerError('Assertion failure', [
           `${this.expected} return value:`,
           value,
@@ -114,7 +116,7 @@ export class Assertions<R extends Engine> {
 
       const output = this.runner.run();
 
-      if (this.assert(!!output.error && matchError(output.error, error))) {
+      if (!this.assert(!!output.error && matchError(output.error, error))) {
         throw new RunnerError('Assertion failure', [
           `${this.expected} error pattern:`,
           error,
@@ -141,7 +143,7 @@ export class Assertions<R extends Engine> {
   }
 
   private assert(assertion: boolean) {
-    return this.negated ? assertion : !assertion;
+    return this.negated ? !assertion : assertion;
   }
 
   private get expected() {
