@@ -278,7 +278,7 @@ createRunner(fetchUser, fetchUserAction)
 
 ## runner.should.not
 
-Negates the next [assertion][assertions].
+Negates the [assertion][assertions] that follows.
 
 Examples:
 
