@@ -1,6 +1,6 @@
 import { put, call, fork } from 'redux-saga/effects';
-import { createRunner, Runner } from 'redux-saga-testable';
-import { runAndCatch, RUNNER_CALL_SITE, fn1, fn2, fn3 } from './helpers';
+import { createRunner } from 'redux-saga-testable';
+import { fn1, fn2, fn3 } from './helpers';
 
 describe('createRunner()', () => {
   test('creates a runner with a saga and its arguments', () => {
@@ -17,13 +17,6 @@ describe('createRunner()', () => {
     expect(runner).toHaveProperty('catch');
     expect(runner).toHaveProperty('clone');
     expect(runner).toHaveProperty('run');
-  });
-
-  test('does not create a runner without providing a saga', () => {
-    const error = runAndCatch(() => (createRunner as () => Runner)());
-
-    expect(error.message).toMatch('Missing saga argument');
-    expect(error.callSite).toMatch(RUNNER_CALL_SITE);
   });
 });
 

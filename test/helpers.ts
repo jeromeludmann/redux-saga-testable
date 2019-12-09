@@ -1,22 +1,21 @@
+import { call } from 'redux-saga/effects';
+
 export const fn1 = () => {};
 export const fn2 = () => {};
 export const fn3 = () => {};
 
-export const RUNNER_CALL_SITE = /^ *at .*\/test\/.+\.test\.ts:\d+:\d+.*$/;
-export const USER_CALL_SITE = /^ *at \[USER CALL SITE\]$/;
-
-export function runAndCatch(fn: Function): Error & { callSite: string } {
-  try {
-    fn();
-    throw new Error('No error thrown from the given function');
-  } catch (error) {
-    (error as ReturnType<typeof runAndCatch>).callSite =
-      getCallSite(error.stack) ?? '';
-    return error;
+export class UserError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.stack = `${this.name}\n  at [USER CALL SITE]`;
   }
 }
 
-function getCallSite(stack: string): string | null {
+export const RUNNER_CALL_SITE = /^ *at .*\/test\/.+\.test\.ts:\d+:\d+.*$/;
+
+export const USER_CALL_SITE = /^ *at \[USER CALL SITE\]$/;
+
+function getFirstCallSite(stack: string): string | null {
   if (!stack) {
     return null;
   }
@@ -36,9 +35,26 @@ function getCallSite(stack: string): string | null {
   }
 }
 
-export class UserError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.stack = `${this.name}\n  at [USER CALL SITE]`;
+export function catchError(fn: Function): Error & { callSite: string } {
+  try {
+    fn();
+    throw new Error('No error thrown from the given function');
+  } catch (error) {
+    (error as ReturnType<typeof catchError>).callSite =
+      getFirstCallSite(error.stack) ?? '';
+    return error;
   }
 }
+
+export const saga = function*() {
+  yield call(fn1);
+};
+
+export const sagaInError = function*() {
+  yield call(fn1);
+  throw new UserError('Failure');
+};
+
+export const infiniteSaga = function*() {
+  for (;;) yield call(fn1);
+};

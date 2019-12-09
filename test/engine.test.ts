@@ -6,15 +6,7 @@ import {
   Runner,
   ThrowError,
 } from 'redux-saga-testable';
-import {
-  runAndCatch,
-  RUNNER_CALL_SITE,
-  USER_CALL_SITE,
-  UserError,
-  fn1,
-  fn2,
-  fn3,
-} from './helpers';
+import { UserError, fn1, fn2, fn3 } from './helpers';
 
 describe('runner.run()', () => {
   test('runs a saga that yields effects', () => {
@@ -78,10 +70,9 @@ describe('runner.run()', () => {
       throw new UserError('Failure');
     };
 
-    const error = runAndCatch(() => createRunner(saga).run());
+    const runSaga = () => createRunner(saga).run();
 
-    expect(error.message).toMatch('Failure');
-    expect(error.callSite).toMatch(USER_CALL_SITE);
+    expect(runSaga).toThrow('Failure');
   });
 
   test('does not run a saga that throws an object', () => {
@@ -111,10 +102,9 @@ describe('runner.run()', () => {
       for (;;) yield put({ type: 'SUCCESS' });
     };
 
-    const error = runAndCatch(() => createRunner(saga).run());
+    const runSaga = () => createRunner(saga).run();
 
-    expect(error.message).toMatch('Too many yielded effects');
-    expect(error.callSite).toMatch(RUNNER_CALL_SITE);
+    expect(runSaga).toThrow('Too many yielded effects');
   });
 });
 
@@ -173,14 +163,12 @@ describe('runner.map()', () => {
       yield call(fn1);
     };
 
-    const error = runAndCatch(() =>
+    const runSaga = () =>
       createRunner(saga)
         .map(call(fn1), (throwError as () => ThrowError)())
-        .run(),
-    );
+        .run();
 
-    expect(error.message).toMatch('Missing error argument');
-    expect(error.callSite).toMatch(RUNNER_CALL_SITE);
+    expect(runSaga).toThrow('Missing error argument');
   });
 
   test('maps an effect to finalize()', () => {
@@ -256,14 +244,12 @@ describe('runner.map()', () => {
       yield put({ type: 'SUCCESS' });
     };
 
-    const error = runAndCatch(() =>
+    const runSaga = () =>
       createRunner(saga)
         .map(call(fn1), 'result')
-        .run(),
-    );
+        .run();
 
-    expect(error.message).toMatch('Unused mapped values');
-    expect(error.callSite).toMatch(RUNNER_CALL_SITE);
+    expect(runSaga).toThrow('Unused mapped values');
   });
 
   test('does not map an effect several times', () => {
@@ -272,17 +258,13 @@ describe('runner.map()', () => {
       yield put({ type: 'SUCCESS', payload: result });
     };
 
-    const error = runAndCatch(() =>
+    const runSaga = () =>
       createRunner(saga)
         .map(call(fn1), 'result1')
         .map(call(fn1), 'result2')
-        .run(),
-    );
+        .run();
 
-    expect(error.message).toMatch(
-      'Mapped values already provided for this effect',
-    );
-    expect(error.callSite).toMatch(RUNNER_CALL_SITE);
+    expect(runSaga).toThrow('Mapped values already provided for this effect');
   });
 
   test('does not map an effect to too many values', () => {
@@ -291,14 +273,12 @@ describe('runner.map()', () => {
       yield put({ type: 'SUCCESS', payload: result });
     };
 
-    const error = runAndCatch(() =>
+    const runSaga = () =>
       createRunner(saga)
         .map(call(fn1), 'result', 'unused result')
-        .run(),
-    );
+        .run();
 
-    expect(error.message).toMatch('Unused mapped values');
-    expect(error.callSite).toMatch(RUNNER_CALL_SITE);
+    expect(runSaga).toThrow('Unused mapped values');
   });
 
   test('does not map an effect without providing a value', () => {
@@ -307,16 +287,14 @@ describe('runner.map()', () => {
       yield put({ type: 'SUCCESS', payload: result });
     };
 
-    const error = runAndCatch(() =>
+    const runSaga = () =>
       (createRunner(saga) as Runner & {
         map: (effect: Effect) => Runner;
       })
         .map(call(fn1))
-        .run(),
-    );
+        .run();
 
-    expect(error.message).toMatch('The value to map is missing');
-    expect(error.callSite).toMatch(RUNNER_CALL_SITE);
+    expect(runSaga).toThrow('The value to map is missing');
   });
 
   test('does not map an effect without providing an effect as an argument', () => {
@@ -325,12 +303,10 @@ describe('runner.map()', () => {
       yield put({ type: 'SUCCESS', payload: result });
     };
 
-    const error = runAndCatch(() =>
-      (createRunner(saga) as Runner & { map: () => Runner }).map().run(),
-    );
+    const runSaga = () =>
+      (createRunner(saga) as Runner & { map: () => Runner }).map().run();
 
-    expect(error.message).toMatch('Missing effect argument');
-    expect(error.callSite).toMatch(RUNNER_CALL_SITE);
+    expect(runSaga).toThrow('Missing effect argument');
   });
 });
 
@@ -432,14 +408,12 @@ describe('runner.catch()', () => {
       throw new UserError('Failure');
     };
 
-    const error = runAndCatch(() =>
+    const runSaga = () =>
       createRunner(saga)
         .catch('unthrown error message')
-        .run(),
-    );
+        .run();
 
-    expect(error.message).toMatch('Failure');
-    expect(error.callSite).toMatch(USER_CALL_SITE);
+    expect(runSaga).toThrow('Failure');
   });
 
   test('does not catch a thrown object that does not have "message" property', () => {
@@ -462,15 +436,13 @@ describe('runner.catch()', () => {
       throw new UserError('Failure');
     };
 
-    const error = runAndCatch(() =>
+    const runSaga = () =>
       createRunner(saga)
         .catch(/^Saga/)
         .catch(/fails$/)
-        .run(),
-    );
+        .run();
 
-    expect(error.message).toMatch('Error pattern already provided');
-    expect(error.callSite).toMatch(RUNNER_CALL_SITE);
+    expect(runSaga).toThrow('Error pattern already provided');
   });
 
   test('does not catch without providing an error pattern', () => {
@@ -479,12 +451,10 @@ describe('runner.catch()', () => {
       throw new UserError('Failure');
     };
 
-    const error = runAndCatch(() =>
-      (createRunner(saga) as Runner & { catch: () => Runner }).catch().run(),
-    );
+    const runSaga = () =>
+      (createRunner(saga) as Runner & { catch: () => Runner }).catch().run();
 
-    expect(error.message).toMatch('Missing error pattern argument');
-    expect(error.callSite).toMatch(RUNNER_CALL_SITE);
+    expect(runSaga).toThrow('Missing error pattern argument');
   });
 
   test('does not catch an error that is not thrown', () => {
@@ -492,64 +462,11 @@ describe('runner.catch()', () => {
       yield call(fn1);
     };
 
-    const error = runAndCatch(() =>
+    const runSaga = () =>
       createRunner(saga)
         .catch(Error)
-        .run(),
-    );
+        .run();
 
-    expect(error.message).toMatch('No error thrown by the saga');
-    expect(error.callSite).toMatch(RUNNER_CALL_SITE);
-  });
-});
-
-describe('output caching', () => {
-  const saga = function*() {
-    yield call(fn1);
-  };
-
-  let runner: any;
-
-  beforeEach(() => {
-    runner = createRunner(saga);
-  });
-
-  test('createRunner() begins without a cached output', () => {
-    expect(runner.cachedOutput).toEqual(null);
-  });
-
-  test('runner.run() produces a cached output', () => {
-    runner.run();
-
-    expect(runner.cachedOutput).not.toEqual(null);
-  });
-
-  test('runner.map() resets the cached output', () => {
-    runner.run();
-    runner.map(call(fn1), 'result');
-
-    expect(runner.cachedOutput).toEqual(null);
-  });
-
-  test('runner.catch() resets the cached output', () => {
-    runner.run();
-    runner.catch(Error);
-
-    expect(runner.cachedOutput).toEqual(null);
-  });
-
-  test('runner.run() runs the saga', () => {
-    const runSaga = jest.spyOn(runner, 'saga');
-    runner.run();
-
-    expect(runSaga).toHaveBeenCalled();
-  });
-
-  test('runner.run() reuses the cached output', () => {
-    runner.run();
-    const runSaga = jest.spyOn(runner, 'saga');
-    runner.run();
-
-    expect(runSaga).not.toHaveBeenCalled();
+    expect(runSaga).toThrow('No error thrown by the saga');
   });
 });
