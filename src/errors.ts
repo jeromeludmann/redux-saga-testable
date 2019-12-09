@@ -1,9 +1,9 @@
 import { stringify } from './strings';
 
 export class RunnerError extends Error {
-  constructor(message: string, params: any[] = [], fn?: Function) {
+  constructor(message: string, callSite: Function, explanations: any[] = []) {
     super(
-      params.reduce((message, param) => {
+      explanations.reduce((message, param) => {
         if (typeof param !== 'string') {
           param = stringify(param);
         }
@@ -13,12 +13,21 @@ export class RunnerError extends Error {
     );
 
     this.name = RunnerError.name;
-    Error.captureStackTrace(this, fn ?? RunnerError);
+    Error.captureStackTrace(this, callSite);
   }
 }
 
-export function setCallSite(error: Error, fn: Function) {
-  if (error.name === RunnerError.name) {
-    Error.captureStackTrace(error, fn);
+export function captureStackTrace<F extends (...args: any[]) => any>(
+  fn: F,
+  callSite: Function,
+): ReturnType<F> {
+  try {
+    return fn();
+  } catch (error) {
+    if (error.name === RunnerError.name) {
+      Error.captureStackTrace(error, callSite);
+    }
+
+    throw error;
   }
 }

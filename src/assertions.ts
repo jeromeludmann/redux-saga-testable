@@ -6,7 +6,7 @@ import * as effects from 'redux-saga/effects';
 import * as types from '@redux-saga/types';
 
 import { Engine } from './engine';
-import { RunnerError, setCallSite } from './errors';
+import { RunnerError, captureStackTrace } from './errors';
 import { ErrorPattern, matchError } from './utils';
 
 export class Assertions<R extends Engine> {
@@ -49,89 +49,69 @@ export class Assertions<R extends Engine> {
    * Asserts that the saga yields an effect.
    */
   yield(effect: Effect) {
-    try {
-      if (!effect) {
-        throw new RunnerError('Missing effect argument');
-      }
-
-      const output = this.runner.run();
-
-      if (
-        !this.assert(output.effects.some(e => isDeepStrictEqual(e, effect)))
-      ) {
-        throw new RunnerError('Assertion failure', [
-          `${this.expected} effect:`,
-          effect,
-          'Received effects:',
-          output.effects,
-        ]);
-      }
-
-      return this.runner;
-    } catch (error) {
-      setCallSite(error, this.yield);
-      throw error;
-    } finally {
-      this.negated = false;
+    if (arguments.length < 1) {
+      throw new RunnerError('Missing effect argument', this.yield);
     }
+
+    const output = captureStackTrace(() => this.runner.run(), this.yield);
+
+    if (!this.assert(output.effects.some(e => isDeepStrictEqual(e, effect)))) {
+      throw new RunnerError('Assertion failure', this.yield, [
+        `${this.expected} effect:`,
+        effect,
+        'Received effects:',
+        output.effects,
+      ]);
+    }
+
+    this.negated = false;
+    return this.runner;
   }
 
   /**
    * Asserts that the saga returns a value.
    */
   return<T>(value: T) {
-    try {
-      if (arguments.length < 1) {
-        throw new RunnerError('Missing value argument');
-      }
-
-      const output = this.runner.run();
-
-      if (!this.assert(isDeepStrictEqual(output.return, value))) {
-        throw new RunnerError('Assertion failure', [
-          `${this.expected} return value:`,
-          value,
-          'Received return value:',
-          output.return,
-        ]);
-      }
-
-      return this.runner;
-    } catch (error) {
-      setCallSite(error, this.return);
-      throw error;
-    } finally {
-      this.negated = false;
+    if (arguments.length < 1) {
+      throw new RunnerError('Missing value argument', this.return);
     }
+
+    const output = captureStackTrace(() => this.runner.run(), this.return);
+
+    if (!this.assert(isDeepStrictEqual(output.return, value))) {
+      throw new RunnerError('Assertion failure', this.return, [
+        `${this.expected} return value:`,
+        value,
+        'Received return value:',
+        output.return,
+      ]);
+    }
+
+    this.negated = false;
+    return this.runner;
   }
 
   /**
    * Asserts that the saga throws an error.
    */
   throw(error: ErrorPattern) {
-    try {
-      if (!error) {
-        throw new RunnerError('Missing error pattern argument');
-      }
-
-      const output = this.runner.run();
-
-      if (!this.assert(!!output.error && matchError(output.error, error))) {
-        throw new RunnerError('Assertion failure', [
-          `${this.expected} error pattern:`,
-          error,
-          'Received thrown error:',
-          output.error,
-        ]);
-      }
-
-      return this.runner;
-    } catch (error) {
-      setCallSite(error, this.throw);
-      throw error;
-    } finally {
-      this.negated = false;
+    if (arguments.length < 1) {
+      throw new RunnerError('Missing error pattern argument', this.throw);
     }
+
+    const output = captureStackTrace(() => this.runner.run(), this.throw);
+
+    if (!this.assert(!!output.error && matchError(output.error, error))) {
+      throw new RunnerError('Assertion failure', this.throw, [
+        `${this.expected} error pattern:`,
+        error,
+        'Received thrown error:',
+        output.error,
+      ]);
+    }
+
+    this.negated = false;
+    return this.runner;
   }
 
   /**
@@ -151,15 +131,8 @@ export class Assertions<R extends Engine> {
   }
 
   private createAlias(effectCreator: (...args: any[]) => Effect) {
-    const alias = (...effectArgs: unknown[]) => {
-      try {
-        return this.yield(effectCreator(...effectArgs));
-      } catch (error) {
-        setCallSite(error, alias);
-        throw error;
-      }
-    };
-
+    const alias = (...effectArgs: unknown[]) =>
+      captureStackTrace(() => this.yield(effectCreator(...effectArgs)), alias);
     return alias;
   }
 

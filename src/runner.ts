@@ -29,8 +29,8 @@ export function createRunner<S extends (...args: any[]) => any>(
   saga: S,
   ...args: Parameters<S>
 ): Runner {
-  if (!saga) {
-    throw new RunnerError('Missing saga argument', [], createRunner);
+  if (arguments.length < 1) {
+    throw new RunnerError('Missing saga argument', createRunner);
   }
 
   return new Runner(saga, args);
