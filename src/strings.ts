@@ -19,11 +19,11 @@ class Stringifier {
     this.currentDepth = 0;
   }
 
-  stringify(value: unknown) {
+  stringify(value: unknown): string {
     return `${this.tabWidth}${this.stringifyValue(value)}`;
   }
 
-  private stringifyValue(value: any) {
+  private stringifyValue(value: any): string {
     switch (typeof value) {
       case 'undefined':
         return 'undefined';
@@ -67,7 +67,7 @@ class Stringifier {
     );
   }
 
-  private stringifyArray(value: unknown[]) {
+  private stringifyArray(value: unknown[]): string {
     return this.stringifyNested(
       () => value.map(value => this.stringifyValue(value)),
       {
@@ -80,9 +80,9 @@ class Stringifier {
   private stringifyNested(
     stringifyFn: () => string[],
     opts: { wrapper: '{}' | '[]'; size: number },
-  ) {
+  ): string {
     const [start, end] = opts.wrapper.split('');
-    const wrap = (str: string) => `${start}${str}${end}`;
+    const wrap = (str: string): string => `${start}${str}${end}`;
 
     if (this.currentDepth === this.maxDepth) {
       return `${wrap(`\u2026`)} (${opts.size})`;
@@ -109,9 +109,9 @@ class Stringifier {
   }
 }
 
-export function stringify<T>(
-  value: T,
+export function stringify(
+  value: unknown,
   { tabWidth, maxDepth }: StringifierOptions = {},
-) {
+): string {
   return new Stringifier({ tabWidth, maxDepth }).stringify(value);
 }

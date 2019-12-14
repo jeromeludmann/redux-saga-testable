@@ -58,7 +58,7 @@ export class Engine {
   /**
    * Maps an effect to a value.
    */
-  map<T>(effect: Effect, value: T, ...nextValues: unknown[]) {
+  map(effect: Effect, value: unknown, ...nextValues: unknown[]): this {
     if (arguments.length < 1) {
       throw new RunnerError('Missing effect argument', this.map);
     }
@@ -100,7 +100,7 @@ export class Engine {
   /**
    * Catches silently an error thrown by the saga.
    */
-  catch(error: ErrorPattern) {
+  catch(error: ErrorPattern): this {
     if (arguments.length < 1) {
       throw new RunnerError('Missing error pattern argument', this.catch);
     }
@@ -121,7 +121,7 @@ export class Engine {
   /**
    * Runs the saga.
    */
-  run() {
+  run(): RunnerOutput {
     // If an output already exists for the current engine state,
     // does not rerun the saga and returns the existing cached output.
     if (this.cachedOutput !== null) {
@@ -204,7 +204,7 @@ export class Engine {
     return this.cachedOutput;
   }
 
-  private next<T>(iterator: Iterator<T>, value: any) {
+  private next<T>(iterator: Iterator<T>, value: any): IteratorResult<any> {
     if (value !== null && typeof value === 'object' && ENGINE in value) {
       switch (value[ENGINE]) {
         case THROW_ERROR:

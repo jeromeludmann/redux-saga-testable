@@ -9,12 +9,12 @@ export class Runner extends Engine {
   /**
    * Provides the assertion methods.
    */
-  should = new Assertions({ runner: this });
+  should = new Assertions(this);
 
   /**
    * Clones the current runner instance.
    */
-  clone() {
+  clone(): Runner {
     return new Runner(this.saga, this.args, {
       mappings: [...this.mappings],
       errorToCatch: this.errorToCatch,

@@ -17,7 +17,7 @@ export class RunnerError extends Error {
   }
 }
 
-export function captureStackTrace<F extends (...args: any[]) => any>(
+export function captureStackTrace<F extends (...args: unknown[]) => any>(
   fn: F,
   callSite: Function,
 ): ReturnType<F> {

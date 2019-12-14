@@ -13,7 +13,7 @@ export class Assertions<R extends Engine> {
   private readonly runner: R;
   private negated: boolean;
 
-  constructor({ runner }: { runner: R }) {
+  constructor(runner: R) {
     this.runner = runner;
     this.negated = false;
 
@@ -48,7 +48,7 @@ export class Assertions<R extends Engine> {
   /**
    * Asserts that the saga yields an effect.
    */
-  yield(effect: Effect) {
+  yield(effect: Effect): R {
     if (arguments.length < 1) {
       throw new RunnerError('Missing effect argument', this.yield);
     }
@@ -71,7 +71,7 @@ export class Assertions<R extends Engine> {
   /**
    * Asserts that the saga returns a value.
    */
-  return<T>(value: T) {
+  return(value: unknown): R {
     if (arguments.length < 1) {
       throw new RunnerError('Missing value argument', this.return);
     }
@@ -94,7 +94,7 @@ export class Assertions<R extends Engine> {
   /**
    * Asserts that the saga throws an error.
    */
-  throw(error: ErrorPattern) {
+  throw(error: ErrorPattern): R {
     if (arguments.length < 1) {
       throw new RunnerError('Missing error pattern argument', this.throw);
     }
@@ -122,16 +122,18 @@ export class Assertions<R extends Engine> {
     return this;
   }
 
-  private assert(assertion: boolean) {
+  private assert(assertion: boolean): boolean {
     return this.negated ? !assertion : assertion;
   }
 
-  private get expected() {
+  private get expected(): string {
     return this.negated ? 'Not expected' : 'Expected';
   }
 
-  private createAlias(effectCreator: (...args: any[]) => Effect) {
-    const alias = (...effectArgs: unknown[]) =>
+  private createAlias(
+    effectCreator: (...args: any[]) => Effect,
+  ): (...effectArgs: unknown[]) => R {
+    const alias = (...effectArgs: unknown[]): R =>
       captureStackTrace(() => this.yield(effectCreator(...effectArgs)), alias);
     return alias;
   }
