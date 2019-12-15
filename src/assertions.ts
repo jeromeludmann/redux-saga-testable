@@ -56,12 +56,16 @@ export class Assertions<R extends Engine> {
     const output = captureStackTrace(() => this.runner.run(), this.yield);
 
     if (!this.assert(output.effects.some(e => isDeepStrictEqual(e, effect)))) {
-      throw new RunnerError('Assertion failure', this.yield, [
-        `${this.expected} effect:`,
-        effect,
-        'Received effects:',
-        output.effects,
-      ]);
+      throw new RunnerError(
+        [
+          'Assertion failure',
+          `${this.expected} effect:`,
+          effect,
+          'Received effects:',
+          output.effects,
+        ],
+        this.yield,
+      );
     }
 
     this.negated = false;
@@ -79,12 +83,16 @@ export class Assertions<R extends Engine> {
     const output = captureStackTrace(() => this.runner.run(), this.return);
 
     if (!this.assert(isDeepStrictEqual(output.return, value))) {
-      throw new RunnerError('Assertion failure', this.return, [
-        `${this.expected} return value:`,
-        value,
-        'Received return value:',
-        output.return,
-      ]);
+      throw new RunnerError(
+        [
+          'Assertion failure',
+          `${this.expected} return value:`,
+          value,
+          'Received return value:',
+          output.return,
+        ],
+        this.return,
+      );
     }
 
     this.negated = false;
@@ -102,12 +110,16 @@ export class Assertions<R extends Engine> {
     const output = captureStackTrace(() => this.runner.run(), this.throw);
 
     if (!this.assert(!!output.error && matchError(output.error, error))) {
-      throw new RunnerError('Assertion failure', this.throw, [
-        `${this.expected} error pattern:`,
-        error,
-        'Received thrown error:',
-        output.error,
-      ]);
+      throw new RunnerError(
+        [
+          'Assertion failure',
+          `${this.expected} error pattern:`,
+          error,
+          'Received thrown error:',
+          output.error,
+        ],
+        this.throw,
+      );
     }
 
     this.negated = false;

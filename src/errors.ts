@@ -1,15 +1,11 @@
 import { stringify } from './strings';
 
 export class RunnerError extends Error {
-  constructor(message: string, callSite: Function, explanations: any[] = []) {
+  constructor(message: string | unknown[], callSite: Function) {
     super(
-      explanations.reduce((message, param) => {
-        if (typeof param !== 'string') {
-          param = stringify(param);
-        }
-        message += `\n\n${param}`;
-        return message;
-      }, message),
+      (Array.isArray(message) ? message : [message])
+        .map(line => (typeof line === 'string' ? line : stringify(line)))
+        .join('\n\n'),
     );
 
     this.name = RunnerError.name;

@@ -64,10 +64,10 @@ export class Engine {
     }
 
     if (arguments.length < 2) {
-      throw new RunnerError('The value to map is missing', this.map, [
-        'Given effect:',
-        effect,
-      ]);
+      throw new RunnerError(
+        ['The value to map is missing', 'Given effect:', effect],
+        this.map,
+      );
     }
 
     const existingMapping = this.mappings.find(mapping =>
@@ -76,14 +76,14 @@ export class Engine {
 
     if (existingMapping) {
       throw new RunnerError(
-        'Mapped values already provided for this effect',
-        this.map,
         [
+          'Mapped values already provided for this effect',
           'Given effect:',
           effect,
           'Existing mapped values:',
           existingMapping.values,
         ],
+        this.map,
       );
     }
 
@@ -106,10 +106,14 @@ export class Engine {
     }
 
     if (this.errorToCatch) {
-      throw new RunnerError('Error pattern already provided', this.catch, [
-        'Given error pattern:',
-        this.errorToCatch,
-      ]);
+      throw new RunnerError(
+        [
+          'Error pattern already provided',
+          'Given error pattern:',
+          this.errorToCatch,
+        ],
+        this.catch,
+      );
     }
 
     this.errorToCatch = error;
@@ -175,12 +179,16 @@ export class Engine {
     const unusedMapping = mappings.find(mapping => mapping.values.length > 0);
 
     if (unusedMapping) {
-      throw new RunnerError('Unused mapped values', this.run, [
-        'Given effect:',
-        unusedMapping.effect,
-        'Unused mapped values:',
-        unusedMapping.values,
-      ]);
+      throw new RunnerError(
+        [
+          'Unused mapped values',
+          'Given effect:',
+          unusedMapping.effect,
+          'Unused mapped values:',
+          unusedMapping.values,
+        ],
+        this.run,
+      );
     }
 
     // Rethrows the error thrown by the saga itself.
@@ -195,10 +203,14 @@ export class Engine {
 
     // Checks for useless `runner.catch()`.
     else if (this.errorToCatch) {
-      throw new RunnerError('No error thrown by the saga', this.run, [
-        'Given error pattern:',
-        this.errorToCatch,
-      ]);
+      throw new RunnerError(
+        [
+          'No error thrown by the saga',
+          'Given error pattern:',
+          this.errorToCatch,
+        ],
+        this.run,
+      );
     }
 
     return this.cachedOutput;
@@ -222,7 +234,7 @@ export class Engine {
  * Throws an error from the saga when mapped as a value.
  */
 export function throwError(error: Error): ThrowError {
-  if (!error) {
+  if (arguments.length < 1) {
     throw new RunnerError('Missing error argument', throwError);
   }
 
