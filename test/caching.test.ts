@@ -1,50 +1,51 @@
 import { call } from 'redux-saga/effects';
-import { createRunner } from 'redux-saga-testable';
+import { Engine } from 'redux-saga-testable/engine';
 import { fn1, saga } from './helpers';
 
 describe('output caching', () => {
-  let runner: any;
+  test('new Engine() begins without a cached output', () => {
+    const engine = new Engine(saga, []);
 
-  beforeEach(() => {
-    runner = createRunner(saga);
+    expect((engine as any).cachedOutput).toEqual(null);
   });
 
-  test('createRunner() begins without a cached output', () => {
-    expect(runner.cachedOutput).toEqual(null);
+  test('engine.run() produces a cached output', () => {
+    const engine = new Engine(saga, []);
+    engine.run();
+
+    expect((engine as any).cachedOutput).not.toEqual(null);
   });
 
-  test('runner.run() produces a cached output', () => {
-    runner.run();
+  test('engine.map() resets the cached output', () => {
+    const engine = new Engine(saga, []);
+    engine.run();
+    engine.map(call(fn1), 'result');
 
-    expect(runner.cachedOutput).not.toEqual(null);
+    expect((engine as any).cachedOutput).toEqual(null);
   });
 
-  test('runner.map() resets the cached output', () => {
-    runner.run();
-    runner.map(call(fn1), 'result');
+  test('engine.catch() resets the cached output', () => {
+    const engine = new Engine(saga, []);
+    engine.run();
+    engine.catch(Error);
 
-    expect(runner.cachedOutput).toEqual(null);
+    expect((engine as any).cachedOutput).toEqual(null);
   });
 
-  test('runner.catch() resets the cached output', () => {
-    runner.run();
-    runner.catch(Error);
+  test('engine.run() runs the saga the first time', () => {
+    const engine = new Engine(saga, []);
+    const engineSaga = jest.spyOn(engine as any, 'saga');
+    engine.run();
 
-    expect(runner.cachedOutput).toEqual(null);
+    expect(engineSaga).toHaveBeenCalled();
   });
 
-  test('runner.run() runs the saga', () => {
-    const runSaga = jest.spyOn(runner, 'saga');
-    runner.run();
+  test('engine.run() does not run the saga and reuses the cached output', () => {
+    const engine = new Engine(saga, []);
+    engine.run();
+    const engineSaga = jest.spyOn(engine as any, 'saga');
+    engine.run();
 
-    expect(runSaga).toHaveBeenCalled();
-  });
-
-  test('runner.run() reuses the cached output', () => {
-    runner.run();
-    const runSaga = jest.spyOn(runner, 'saga');
-    runner.run();
-
-    expect(runSaga).not.toHaveBeenCalled();
+    expect(engineSaga).not.toHaveBeenCalled();
   });
 });
