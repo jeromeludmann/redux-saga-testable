@@ -58,7 +58,7 @@ exports[`stringify() empty array 1`] = `"  []"`;
 
 exports[`stringify() empty object 1`] = `"  {}"`;
 
-exports[`stringify() named function 1`] = `"  ƒ fn"`;
+exports[`stringify() function 1`] = `"  ƒ fn"`;
 
 exports[`stringify() null 1`] = `"  null"`;
 

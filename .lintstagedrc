@@ -1,3 +1,6 @@
 {
-  "*.+(ts|js|json|yml|md)": ["prettier --write", "git add"]
+  "*.+(ts|js|json|yml|md)": [
+    "prettier --write",
+    "git add"
+  ]
 }

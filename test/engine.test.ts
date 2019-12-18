@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/explicit-function-return-type */
 import { Effect, put, call } from 'redux-saga/effects';
 import {
   createRunner,

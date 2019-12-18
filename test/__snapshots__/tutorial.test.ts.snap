@@ -19,7 +19,7 @@ Object {
       "combinator": false,
       "payload": Object {
         "args": Array [],
-        "selector": [Function],
+        "selector": [MockFunction],
       },
       "type": "SELECT",
     },
@@ -31,7 +31,7 @@ Object {
           123,
         ],
         "context": null,
-        "fn": [Function],
+        "fn": [MockFunction],
       },
       "type": "CALL",
     },

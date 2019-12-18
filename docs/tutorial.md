@@ -348,13 +348,13 @@ Assuming you have this case:
 
 ```ts
 function* sendPingWorker(action: SendPingAction) {
-  yield delay(1000);
+  yield delay(action.payload.delay);
   const pong1 = yield call(services.ping);
 
-  yield delay(1000);
+  yield delay(action.payload.delay);
   const pong2 = yield call(services.ping);
 
-  yield delay(1000);
+  yield delay(action.payload.delay);
   const pong3 = yield call(services.ping);
 
   yield put({
@@ -372,7 +372,7 @@ You would like to be able to map several values for the same effect
 
 ```ts
 test('sendPingWorker() should dispatch RECEIVE_PONG with different results', () => {
-  createRunner(sendPingWorker, { type: 'SEND_PING' })
+  createRunner(sendPingWorker, { type: 'SEND_PING', payload: { delay: 1000 } })
     .map(call(services.ping), 12, 10, 11)
     .should.put({
       type: 'RECEIVE_PONG',

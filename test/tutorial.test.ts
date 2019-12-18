@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/explicit-function-return-type */
 import { Action } from 'redux';
 import { select, put, call, take, delay } from 'redux-saga/effects';
 import { createRunner, throwError, finalize } from 'redux-saga-testable';
@@ -10,17 +11,19 @@ interface FetchProductAction extends Action<'FETCH_PRODUCT'> {
   payload: { productId: number };
 }
 
-interface SendPingAction extends Action<'SEND_PING'> {}
+interface SendPingAction extends Action<'SEND_PING'> {
+  payload: { delay: number };
+}
 
 const selectors = {
-  getCurrentUser: (state: { user: any }) => state.user,
+  getCurrentUser: jest.fn(),
 };
 
 const services = {
-  getUserById: (id: number) => {},
-  getProductById: (id: number) => {},
-  ping: () => {},
-  notify: () => {},
+  getUserById: jest.fn(),
+  getProductById: jest.fn(),
+  ping: jest.fn(),
+  notify: jest.fn(),
 };
 
 function* fetchUserWorker(action: FetchUserAction) {
@@ -110,13 +113,13 @@ test('fetchProductWorker() should dispatch FETCH_PRODUCT_FAILURE if services.get
 });
 
 function* sendPingWorker(action: SendPingAction) {
-  yield delay(1000);
+  yield delay(action.payload.delay);
   const pong1 = yield call(services.ping);
 
-  yield delay(1000);
+  yield delay(action.payload.delay);
   const pong2 = yield call(services.ping);
 
-  yield delay(1000);
+  yield delay(action.payload.delay);
   const pong3 = yield call(services.ping);
 
   yield put({
@@ -126,7 +129,7 @@ function* sendPingWorker(action: SendPingAction) {
 }
 
 test('sendPingWorker() should dispatch RECEIVE_PONG with different results', () => {
-  createRunner(sendPingWorker, { type: 'SEND_PING' })
+  createRunner(sendPingWorker, { type: 'SEND_PING', payload: { delay: 1000 } })
     .map(call(services.ping), 12, 10, 11)
     .should.put({
       type: 'RECEIVE_PONG',

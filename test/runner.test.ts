@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/explicit-function-return-type */
 import { put, call, fork } from 'redux-saga/effects';
 import { createRunner } from 'redux-saga-testable';
 import { fn1, fn2, fn3 } from './helpers';

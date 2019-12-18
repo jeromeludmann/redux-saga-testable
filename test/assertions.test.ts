@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/explicit-function-return-type */
 import { Task, channel } from 'redux-saga';
 import * as effects from 'redux-saga/effects';
 import { createMockTask } from '@redux-saga/testing-utils';
