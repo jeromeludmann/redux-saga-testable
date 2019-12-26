@@ -11,7 +11,8 @@
     "paths": {
       "redux-saga-testable": ["src/main.ts"],
       "redux-saga-testable/*": ["src/*"]
-    }
+    },
+    "typeRoots": ["node_modules/@types"]
   },
   "exclude": ["lib"]
 }
