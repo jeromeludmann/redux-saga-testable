@@ -23,7 +23,7 @@ describe('runner.should.yield()', () => {
   test('does not assert that the saga yields an effect', () => {
     const runSaga = () => createRunner(saga).should.yield(effects.call(fn1));
 
-    expect(runSaga).toThrow('Assertion failure\n\nExpected');
+    expect(runSaga).toThrowErrorMatchingSnapshot();
   });
 
   test('does not assert that the saga does not yield an effect', () => {
@@ -32,7 +32,7 @@ describe('runner.should.yield()', () => {
         effects.put({ type: 'SUCCESS', payload: 'result' }),
       );
 
-    expect(runSaga).toThrow('Assertion failure\n\nNot expected');
+    expect(runSaga).toThrowErrorMatchingSnapshot();
   });
 
   test('does not assert that the saga yields an effect without providing an effect', () => {
@@ -41,7 +41,7 @@ describe('runner.should.yield()', () => {
         should: { yield: () => Runner };
       }).should.yield();
 
-    expect(runSaga).toThrow('Missing effect argument');
+    expect(runSaga).toThrowErrorMatchingSnapshot();
   });
 });
 
@@ -61,13 +61,13 @@ describe('runner.should.return()', () => {
   test('does not assert that the saga returns a value', () => {
     const runSaga = () => createRunner(saga).should.return('result2');
 
-    expect(runSaga).toThrow('Assertion failure\n\nExpected');
+    expect(runSaga).toThrowErrorMatchingSnapshot();
   });
 
   test('does not assert that the saga does not return a value', () => {
     const runSaga = () => createRunner(saga).should.not.return('result1');
 
-    expect(runSaga).toThrow('Assertion failure\n\nNot expected');
+    expect(runSaga).toThrowErrorMatchingSnapshot();
   });
 
   test('does accept "0" as an argument', () => {
@@ -92,7 +92,7 @@ describe('runner.should.return()', () => {
         should: { return: () => Runner };
       }).should.return();
 
-    expect(runSaga).toThrow('Missing value argument');
+    expect(runSaga).toThrowErrorMatchingSnapshot();
   });
 });
 
@@ -120,7 +120,7 @@ describe('runner.should.throw()', () => {
         .catch('Failure')
         .should.throw('unthrown');
 
-    expect(runSaga).toThrow('Assertion failure\n\nExpected');
+    expect(runSaga).toThrowErrorMatchingSnapshot();
   });
 
   test('does not assert that the saga does not throw an error', () => {
@@ -129,7 +129,7 @@ describe('runner.should.throw()', () => {
         .catch('Failure')
         .should.not.throw('Failure');
 
-    expect(runSaga).toThrow('Assertion failure\n\nNot expected');
+    expect(runSaga).toThrowErrorMatchingSnapshot();
   });
 
   test('does not assert that the saga throws an error that is not thrown', () => {
@@ -139,7 +139,7 @@ describe('runner.should.throw()', () => {
 
     const runSaga = () => createRunner(saga).should.throw(Error);
 
-    expect(runSaga).toThrow('Assertion failure\n\nExpected');
+    expect(runSaga).toThrowErrorMatchingSnapshot();
   });
 
   test('does not assert that the saga throws an error without providing an error pattern', () => {
@@ -152,7 +152,7 @@ describe('runner.should.throw()', () => {
         should: { throw: () => Runner };
       }).should.throw();
 
-    expect(runSaga).toThrow('Missing error pattern argument');
+    expect(runSaga).toThrowErrorMatchingSnapshot();
   });
 });
 

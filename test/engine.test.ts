@@ -73,7 +73,7 @@ describe('runner.run()', () => {
 
     const runSaga = () => createRunner(saga).run();
 
-    expect(runSaga).toThrow('Failure');
+    expect(runSaga).toThrowErrorMatchingSnapshot();
   });
 
   test('does not run a saga that throws an object', () => {
@@ -84,7 +84,7 @@ describe('runner.run()', () => {
 
     const runSaga = () => createRunner(saga).run();
 
-    expect(runSaga).toThrow('Failure');
+    expect(runSaga).toThrowErrorMatchingSnapshot();
   });
 
   test('does not run a saga that throws a string', () => {
@@ -95,7 +95,7 @@ describe('runner.run()', () => {
 
     const runSaga = () => createRunner(saga).run();
 
-    expect(runSaga).toThrow('Failure');
+    expect(runSaga).toThrowErrorMatchingSnapshot();
   });
 
   test('does not run a saga that yields an infinity of effects', () => {
@@ -105,7 +105,7 @@ describe('runner.run()', () => {
 
     const runSaga = () => createRunner(saga).run();
 
-    expect(runSaga).toThrow('Too many yielded effects');
+    expect(runSaga).toThrowErrorMatchingSnapshot();
   });
 });
 
@@ -169,7 +169,7 @@ describe('runner.map()', () => {
         .map(call(fn1), (throwError as () => ThrowError)())
         .run();
 
-    expect(runSaga).toThrow('Missing error argument');
+    expect(runSaga).toThrowErrorMatchingSnapshot();
   });
 
   test('maps an effect to finalize()', () => {
@@ -250,7 +250,7 @@ describe('runner.map()', () => {
         .map(call(fn1), 'result')
         .run();
 
-    expect(runSaga).toThrow('Unused mapped values');
+    expect(runSaga).toThrowErrorMatchingSnapshot();
   });
 
   test('does not map an effect several times', () => {
@@ -265,7 +265,7 @@ describe('runner.map()', () => {
         .map(call(fn1), 'result2')
         .run();
 
-    expect(runSaga).toThrow('Mapped values already provided for this effect');
+    expect(runSaga).toThrowErrorMatchingSnapshot();
   });
 
   test('does not map an effect to too many values', () => {
@@ -279,7 +279,7 @@ describe('runner.map()', () => {
         .map(call(fn1), 'result', 'unused result')
         .run();
 
-    expect(runSaga).toThrow('Unused mapped values');
+    expect(runSaga).toThrowErrorMatchingSnapshot();
   });
 
   test('does not map an effect without providing a value', () => {
@@ -295,7 +295,7 @@ describe('runner.map()', () => {
         .map(call(fn1))
         .run();
 
-    expect(runSaga).toThrow('The value to map is missing');
+    expect(runSaga).toThrowErrorMatchingSnapshot();
   });
 
   test('does not map an effect without providing an effect as an argument', () => {
@@ -307,7 +307,7 @@ describe('runner.map()', () => {
     const runSaga = () =>
       (createRunner(saga) as Runner & { map: () => Runner }).map().run();
 
-    expect(runSaga).toThrow('Missing effect argument');
+    expect(runSaga).toThrowErrorMatchingSnapshot();
   });
 });
 
@@ -414,7 +414,7 @@ describe('runner.catch()', () => {
         .catch('unthrown error message')
         .run();
 
-    expect(runSaga).toThrow('Failure');
+    expect(runSaga).toThrowErrorMatchingSnapshot();
   });
 
   test('does not catch a thrown object that does not have "message" property', () => {
@@ -428,7 +428,7 @@ describe('runner.catch()', () => {
         .catch('value of an uncatchable object')
         .run();
 
-    expect(runSaga).toThrow();
+    expect(runSaga).toThrowErrorMatchingSnapshot();
   });
 
   test('does not catch errors several times', () => {
@@ -443,7 +443,7 @@ describe('runner.catch()', () => {
         .catch(/fails$/)
         .run();
 
-    expect(runSaga).toThrow('Error pattern already provided');
+    expect(runSaga).toThrowErrorMatchingSnapshot();
   });
 
   test('does not catch without providing an error pattern', () => {
@@ -455,7 +455,7 @@ describe('runner.catch()', () => {
     const runSaga = () =>
       (createRunner(saga) as Runner & { catch: () => Runner }).catch().run();
 
-    expect(runSaga).toThrow('Missing error pattern argument');
+    expect(runSaga).toThrowErrorMatchingSnapshot();
   });
 
   test('does not catch an error that is not thrown', () => {
@@ -468,6 +468,6 @@ describe('runner.catch()', () => {
         .catch(Error)
         .run();
 
-    expect(runSaga).toThrow('No error thrown by the saga');
+    expect(runSaga).toThrowErrorMatchingSnapshot();
   });
 });

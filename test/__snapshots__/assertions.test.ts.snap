@@ -1,0 +1,137 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`runner.should.return() does not assert that the saga does not return a value 1`] = `
+"Assertion failure
+
+Not expected return value:
+
+  \\"result1\\"
+
+Received return value:
+
+  \\"result1\\""
+`;
+
+exports[`runner.should.return() does not assert that the saga returns a value 1`] = `
+"Assertion failure
+
+Expected return value:
+
+  \\"result2\\"
+
+Received return value:
+
+  \\"result1\\""
+`;
+
+exports[`runner.should.return() does not assert that the saga returns an effect without providing a value 1`] = `"Missing value argument"`;
+
+exports[`runner.should.throw() does not assert that the saga does not throw an error 1`] = `
+"Assertion failure
+
+Not expected error pattern:
+
+  \\"Failure\\"
+
+Received thrown error:
+
+  Error: Failure"
+`;
+
+exports[`runner.should.throw() does not assert that the saga throws an error 1`] = `
+"Assertion failure
+
+Expected error pattern:
+
+  \\"unthrown\\"
+
+Received thrown error:
+
+  Error: Failure"
+`;
+
+exports[`runner.should.throw() does not assert that the saga throws an error that is not thrown 1`] = `
+"Assertion failure
+
+Expected error pattern:
+
+  ƒ Error
+
+Received thrown error:
+
+  undefined"
+`;
+
+exports[`runner.should.throw() does not assert that the saga throws an error without providing an error pattern 1`] = `"Missing error pattern argument"`;
+
+exports[`runner.should.yield() does not assert that the saga does not yield an effect 1`] = `
+"Assertion failure
+
+Not expected effect:
+
+  {
+    @@redux-saga/IO: true,
+    combinator: false,
+    type: \\"PUT\\",
+    payload: {
+      channel: undefined,
+      action: {
+        type: \\"SUCCESS\\",
+        payload: \\"result\\"
+      }
+    }
+  }
+
+Received effects:
+
+  [
+    {
+      @@redux-saga/IO: true,
+      combinator: false,
+      type: \\"PUT\\",
+      payload: {
+        channel: undefined,
+        action: {
+          type: \\"SUCCESS\\",
+          payload: \\"result\\"
+        }
+      }
+    }
+  ]"
+`;
+
+exports[`runner.should.yield() does not assert that the saga yields an effect 1`] = `
+"Assertion failure
+
+Expected effect:
+
+  {
+    @@redux-saga/IO: true,
+    combinator: false,
+    type: \\"CALL\\",
+    payload: {
+        context: null,
+        fn: ƒ <anonymous>,
+        args: []
+    }
+  }
+
+Received effects:
+
+  [
+    {
+      @@redux-saga/IO: true,
+      combinator: false,
+      type: \\"PUT\\",
+      payload: {
+        channel: undefined,
+        action: {
+          type: \\"SUCCESS\\",
+          payload: \\"result\\"
+        }
+      }
+    }
+  ]"
+`;
+
+exports[`runner.should.yield() does not assert that the saga yields an effect without providing an effect 1`] = `"Missing effect argument"`;
