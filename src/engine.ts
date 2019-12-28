@@ -2,6 +2,7 @@ import { isDeepStrictEqual } from 'util';
 import { Effect, Saga } from '@redux-saga/types';
 
 import { RunnerError } from './errors';
+import { stringify } from './strings';
 import { ErrorPattern, isEffect, matchError } from './utils';
 
 /**
@@ -65,7 +66,7 @@ export class Engine {
 
     if (arguments.length < 2) {
       throw new RunnerError(
-        ['The value to map is missing', 'Given effect:', effect],
+        ['The value to map is missing', 'Given effect:', stringify(effect)],
         this.map,
       );
     }
@@ -79,9 +80,9 @@ export class Engine {
         [
           'Mapped values already provided for this effect',
           'Given effect:',
-          effect,
+          stringify(effect),
           'Existing mapped values:',
-          existingMapping.values,
+          stringify(existingMapping.values),
         ],
         this.map,
       );
@@ -110,7 +111,7 @@ export class Engine {
         [
           'Error pattern already provided',
           'Given error pattern:',
-          this.errorToCatch,
+          stringify(this.errorToCatch),
         ],
         this.catch,
       );
@@ -183,9 +184,9 @@ export class Engine {
         [
           'Unused mapped values',
           'Given effect:',
-          unusedMapping.effect,
+          stringify(unusedMapping.effect),
           'Unused mapped values:',
-          unusedMapping.values,
+          stringify(unusedMapping.values),
         ],
         this.run,
       );
@@ -207,7 +208,7 @@ export class Engine {
         [
           'No error thrown by the saga',
           'Given error pattern:',
-          this.errorToCatch,
+          stringify(this.errorToCatch),
         ],
         this.run,
       );

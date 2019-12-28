@@ -1,12 +1,7 @@
-import { stringify } from './strings';
-
 export class RunnerError extends Error {
   constructor(message: string | unknown[], callSite: Function) {
-    super(
-      (Array.isArray(message) ? message : [message])
-        .map(line => (typeof line === 'string' ? line : stringify(line)))
-        .join('\n\n'),
-    );
+    message = Array.isArray(message) ? message : [message];
+    super(message.join('\n\n'));
 
     this.name = RunnerError.name;
     Error.captureStackTrace(this, callSite);

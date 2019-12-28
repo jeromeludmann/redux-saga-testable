@@ -7,6 +7,7 @@ import * as types from '@redux-saga/types';
 
 import { Engine } from './engine';
 import { RunnerError, captureStackTrace } from './errors';
+import { stringify } from './strings';
 import { ErrorPattern, matchError } from './utils';
 
 export class Assertions<R extends Engine> {
@@ -60,9 +61,9 @@ export class Assertions<R extends Engine> {
         [
           'Assertion failure',
           `${this.expected} effect:`,
-          effect,
+          stringify(effect),
           'Received effects:',
-          output.effects,
+          stringify(output.effects),
         ],
         this.yield,
       );
@@ -87,9 +88,9 @@ export class Assertions<R extends Engine> {
         [
           'Assertion failure',
           `${this.expected} return value:`,
-          value,
+          stringify(value),
           'Received return value:',
-          output.return,
+          stringify(output.return),
         ],
         this.return,
       );
@@ -114,9 +115,9 @@ export class Assertions<R extends Engine> {
         [
           'Assertion failure',
           `${this.expected} error pattern:`,
-          error,
+          stringify(error),
           'Received thrown error:',
-          output.error,
+          stringify(output.error),
         ],
         this.throw,
       );

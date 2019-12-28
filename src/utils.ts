@@ -8,7 +8,11 @@ export type ErrorPattern =
 
 export function matchError(error: Error, pattern: ErrorPattern): boolean {
   if (typeof error !== 'object') {
-    error = { name: '', message: error };
+    error = { name: '', message: String(error) };
+  }
+
+  if (error.message === undefined) {
+    return false;
   }
 
   if (typeof pattern === 'string' && error.message.includes(pattern)) {
