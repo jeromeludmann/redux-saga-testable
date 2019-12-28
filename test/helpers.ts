@@ -39,12 +39,15 @@ function getFirstCallSite(stack: string): string | null {
 export function catchError(fn: Function): Error & { callSite: string } {
   try {
     fn();
-    throw new Error('No error thrown from the given function');
   } catch (error) {
     (error as ReturnType<typeof catchError>).callSite =
       getFirstCallSite(error.stack) ?? '';
     return error;
   }
+
+  const e = new Error('No error thrown from the given function');
+  Error.captureStackTrace(e, catchError);
+  throw e;
 }
 
 export const saga = function*() {
