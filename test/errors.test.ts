@@ -1,20 +1,13 @@
+/* eslint-disable @typescript-eslint/explicit-function-return-type */
 import { call, Effect } from 'redux-saga/effects';
 import {
   createRunner,
   throwError,
-  ThrowError,
   Runner,
+  ThrowError,
 } from 'redux-saga-testable';
-import {
-  fn1,
-  fn2,
-  catchError,
-  saga,
-  sagaInError,
-  infiniteSaga,
-  RUNNER_CALL_SITE,
-  USER_CALL_SITE,
-} from './helpers';
+import { saga, fn1, fn2, UserError } from './helpers/mocks';
+import { catchError, RUNNER_CALL_SITE, USER_CALL_SITE } from './helpers/errors';
 
 describe('createRunner()', () => {
   test('"Missing saga argument"', () => {
@@ -94,6 +87,15 @@ describe('runner.catch()', () => {
 });
 
 describe('runner.run()', () => {
+  const sagaInError = function*() {
+    yield call(fn1);
+    throw new UserError('Failure');
+  };
+
+  const infiniteSaga = function*() {
+    for (;;) yield call(fn1);
+  };
+
   test('a user error', () => {
     const error = catchError(() => createRunner(sagaInError).run());
 

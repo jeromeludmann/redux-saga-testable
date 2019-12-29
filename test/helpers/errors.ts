@@ -1,17 +1,3 @@
-/* eslint-disable @typescript-eslint/explicit-function-return-type */
-import { call } from 'redux-saga/effects';
-
-export const fn1 = () => {};
-export const fn2 = () => {};
-export const fn3 = () => {};
-
-export class UserError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.stack = `${this.name}\n  at [USER CALL SITE]`;
-  }
-}
-
 export const RUNNER_CALL_SITE = /^ *at .*\/test\/.+\.test\.ts:\d+:\d+.*$/;
 
 export const USER_CALL_SITE = /^ *at \[USER CALL SITE\]$/;
@@ -49,16 +35,3 @@ export function catchError(fn: Function): Error & { callSite: string } {
   Error.captureStackTrace(e, catchError);
   throw e;
 }
-
-export const saga = function*() {
-  yield call(fn1);
-};
-
-export const sagaInError = function*() {
-  yield call(fn1);
-  throw new UserError('Failure');
-};
-
-export const infiniteSaga = function*() {
-  for (;;) yield call(fn1);
-};

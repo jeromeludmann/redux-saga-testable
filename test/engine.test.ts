@@ -7,7 +7,7 @@ import {
   Runner,
   ThrowError,
 } from 'redux-saga-testable';
-import { UserError, fn1, fn2, fn3 } from './helpers';
+import { fn1, fn2, fn3, UserError } from './helpers/mocks';
 
 describe('runner.run()', () => {
   test('runs a saga that yields effects', () => {

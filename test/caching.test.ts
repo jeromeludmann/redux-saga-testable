@@ -1,6 +1,6 @@
 import { call } from 'redux-saga/effects';
 import { Engine } from 'redux-saga-testable/engine';
-import { fn1, saga } from './helpers';
+import { saga, fn1 } from './helpers/mocks';
 
 describe('output caching', () => {
   test('new Engine() begins without a cached output', () => {

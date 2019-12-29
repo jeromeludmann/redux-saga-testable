@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/explicit-function-return-type */
 import { put, call, fork } from 'redux-saga/effects';
 import { createRunner } from 'redux-saga-testable';
-import { fn1, fn2, fn3 } from './helpers';
+import { fn1, fn2, fn3 } from './helpers/mocks';
 
 describe('createRunner()', () => {
   test('creates a runner with a saga and its arguments', () => {

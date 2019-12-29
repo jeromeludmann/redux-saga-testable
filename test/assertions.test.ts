@@ -3,7 +3,7 @@ import { Task, channel } from 'redux-saga';
 import * as effects from 'redux-saga/effects';
 import { createMockTask } from '@redux-saga/testing-utils';
 import { createRunner, Runner } from 'redux-saga-testable';
-import { UserError, fn1, fn2, fn3 } from './helpers';
+import { fn1, fn2, fn3, UserError } from './helpers/mocks';
 
 describe('runner.should.yield()', () => {
   const saga = function*() {
