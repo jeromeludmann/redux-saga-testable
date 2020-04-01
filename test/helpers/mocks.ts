@@ -1,11 +1,12 @@
 /* eslint-disable @typescript-eslint/explicit-function-return-type */
+/* eslint-disable @typescript-eslint/no-empty-function */
 import { call } from 'redux-saga/effects';
 
 export const fn1 = () => {};
 export const fn2 = () => {};
 export const fn3 = () => {};
 
-export const saga = function*() {
+export const saga = function* () {
   yield call(fn1);
 };
 
