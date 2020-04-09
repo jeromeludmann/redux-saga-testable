@@ -286,7 +286,7 @@ Explanations:
   saga.
 
 [`finalize()`][finalize] will break the infinite loop and the saga will be
-finalized. When a saga is finalized, it will reach its the next `finally` block
+finalized. When a saga is finalized, it will reach its next `finally` block
 before to terminate completely.
 
 ## Catch silently an error thrown by a saga
