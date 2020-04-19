@@ -10,7 +10,7 @@
   - [`runner.run()`][runner.run]
   - [`runner.should`][runner.should]
 - [`throwError(error)`][throwerror]
-- [`finalize()`][finalize]
+- [`finalize(value?)`][finalize]
 - [`RunnerOutput`][runneroutput]
 - [`Assertions`][assertions]
   - [`runner.should.yield(effect)`][runner.should.yield]
@@ -169,9 +169,11 @@ createRunner(fetchUser, fetchUserAction)
   .run();
 ```
 
-## finalize()
+## finalize(value?)
 
 Finalizes the saga when mapped as a value with [`runner.map()`][runner.map].
+
+Can be used to break an infinite loop.
 
 Returns a `Finalize` value.
 
@@ -180,6 +182,14 @@ Example:
 ```js
 createRunner(fetchUser, fetchUserAction)
   .map(getUser, finalize())
+  .run();
+```
+
+or by passing a mapped value to the effect:
+
+```js
+createRunner(fetchUser, fetchUserAction)
+  .map(getUser, finalize(user))
   .run();
 ```
 
@@ -312,7 +322,7 @@ createRunner(fetchUser, fetchUserAction)
 [runner.run]: #runnerrun
 [runner.should]: #runnershould
 [throwerror]: #throwerrorerror
-[finalize]: #finalize
+[finalize]: #finalizevalue
 [runneroutput]: #runneroutput
 [assertions]: #assertions
 [runner.should.yield]: #runnershouldyieldeffect
