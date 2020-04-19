@@ -35,8 +35,9 @@ export interface ThrowError {
 
 const FINALIZE = 'FINALIZE';
 
-export interface Finalize {
+export interface Finalize<T> {
   [ENGINE]: typeof FINALIZE;
+  value?: T;
 }
 
 const MAX_YIELDED_EFFECTS = 100;
@@ -223,6 +224,9 @@ export class Engine {
         case THROW_ERROR:
           return iterator.throw!(value.error);
         case FINALIZE:
+          if (value.value !== undefined) {
+            iterator.next(value.value);
+          }
           return iterator.return!();
       }
     }
@@ -248,6 +252,9 @@ export function throwError(error: Error): ThrowError {
 /**
  * Finalizes the saga when mapped as a value.
  */
-export function finalize(): Finalize {
-  return { [ENGINE]: FINALIZE };
+export function finalize<T>(value?: T): Finalize<T> {
+  return {
+    [ENGINE]: FINALIZE,
+    value,
+  };
 }

@@ -174,11 +174,12 @@ describe('runner.map()', () => {
 
   test('maps an effect to finalize()', () => {
     const saga = function*() {
+      let result = undefined;
       try {
-        yield call(fn1);
+        result = yield call(fn1);
         yield put({ type: 'SUCCESS' });
       } finally {
-        yield put({ type: 'END' });
+        yield put({ type: 'END', result });
       }
     };
 
@@ -187,6 +188,27 @@ describe('runner.map()', () => {
       .run();
 
     expect(output.effects).toEqual([call(fn1), put({ type: 'END' })]);
+  });
+
+  test('maps an effect to finalize() with a value', () => {
+    const saga = function*() {
+      let result = undefined;
+      try {
+        result = yield call(fn1);
+        yield put({ type: 'SUCCESS' });
+      } finally {
+        yield put({ type: 'END', result });
+      }
+    };
+
+    const output = createRunner(saga)
+      .map(call(fn1), finalize('result'))
+      .run();
+
+    expect(output.effects).toEqual([
+      call(fn1),
+      put({ type: 'END', result: 'result' }),
+    ]);
   });
 
   test('maps an effect to several values', () => {
