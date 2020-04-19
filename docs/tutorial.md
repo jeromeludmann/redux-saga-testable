@@ -425,7 +425,7 @@ You can [see more details here][runner.clone].
 [runner.run]: api.md#runnerrun
 [runner.should]: api.md#runnershould
 [throwerror]: api.md#throwerrorerror
-[finalize]: api.md#finalize
+[finalize]: api.md#finalizevalue
 [runneroutput]: api.md#runneroutput
 [runner.should.yield]: api.md#runnershouldyieldeffect
 [runner.should.return]: api.md#runnershouldreturnvalue
