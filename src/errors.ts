@@ -1,8 +1,7 @@
 export class RunnerError extends Error {
-  constructor(message: string | unknown[], callSite: Function) {
+  constructor(message: string | unknown[], callSite: (...args: any[]) => any) {
     message = Array.isArray(message) ? message : [message];
     super(message.join('\n\n'));
-
     this.name = RunnerError.name;
     Error.captureStackTrace(this, callSite);
   }
@@ -10,7 +9,7 @@ export class RunnerError extends Error {
 
 export function captureStackTrace<F extends (...args: unknown[]) => any>(
   fn: F,
-  callSite: Function,
+  callSite: (...args: any[]) => any,
 ): ReturnType<F> {
   try {
     return fn();

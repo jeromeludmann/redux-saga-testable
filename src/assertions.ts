@@ -1,12 +1,11 @@
-import { isDeepStrictEqual } from 'util';
-import { Action } from 'redux';
-import { TakeableChannel, PuttableChannel, FlushableChannel } from 'redux-saga';
-import { Effect } from 'redux-saga/effects';
-import * as effects from 'redux-saga/effects';
 import * as types from '@redux-saga/types';
-
+import { Action } from 'redux';
+import { FlushableChannel, PuttableChannel, TakeableChannel } from 'redux-saga';
+import * as effects from 'redux-saga/effects';
+import { Effect } from 'redux-saga/effects';
+import { isDeepStrictEqual } from 'util';
 import { Engine } from './engine';
-import { RunnerError, captureStackTrace } from './errors';
+import { captureStackTrace, RunnerError } from './errors';
 import { stringify } from './strings';
 import { ErrorPattern, matchError } from './utils';
 
@@ -56,7 +55,9 @@ export class Assertions<R extends Engine> {
 
     const output = captureStackTrace(() => this.runner.run(), this.yield);
 
-    if (!this.assert(output.effects.some(e => isDeepStrictEqual(e, effect)))) {
+    if (
+      !this.assert(output.effects.some((e) => isDeepStrictEqual(e, effect)))
+    ) {
       throw new RunnerError(
         [
           'Assertion failure',
@@ -515,7 +516,7 @@ export class Assertions<R extends Engine> {
   /**
    * Alias for `runner.should.yield(setContext(...))`
    */
-  setContext: <C extends object>(props: C) => R;
+  setContext: <C extends Record<string, unknown>>(props: C) => R;
 
   /**
    * Alias for `runner.should.yield(getContext(...))`

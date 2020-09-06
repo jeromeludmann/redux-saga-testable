@@ -38,6 +38,6 @@ export function matchError(error: Error, pattern: ErrorPattern): boolean {
   return false;
 }
 
-export function isEffect(obj: any): boolean {
-  return obj !== null && typeof obj === 'object' && IO in obj;
+export function isEffect(obj: unknown): boolean {
+  return typeof obj === 'object' && obj !== null && IO in obj;
 }

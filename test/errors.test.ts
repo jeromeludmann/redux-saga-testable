@@ -1,13 +1,13 @@
 /* eslint-disable @typescript-eslint/explicit-function-return-type */
-import { call, Effect } from 'redux-saga/effects';
 import {
   createRunner,
-  throwError,
   Runner,
+  throwError,
   ThrowError,
 } from 'redux-saga-testable';
-import { saga, fn1, fn2, UserError } from './helpers/mocks';
+import { call, Effect } from 'redux-saga/effects';
 import { catchError, RUNNER_CALL_SITE, USER_CALL_SITE } from './helpers/errors';
+import { fn1, fn2, saga, UserError } from './helpers/mocks';
 
 describe('createRunner()', () => {
   test('"Missing saga argument"', () => {
@@ -52,9 +52,7 @@ describe('runner.map()', () => {
 
   test('"Mapped values already provided for this effect"', () => {
     const error = catchError(() =>
-      createRunner(saga)
-        .map(call(fn1), 'result1')
-        .map(call(fn1), 'result2'),
+      createRunner(saga).map(call(fn1), 'result1').map(call(fn1), 'result2'),
     );
 
     expect(error.message).toMatch(
@@ -87,12 +85,12 @@ describe('runner.catch()', () => {
 });
 
 describe('runner.run()', () => {
-  const sagaInError = function*() {
+  const sagaInError = function* () {
     yield call(fn1);
     throw new UserError('Failure');
   };
 
-  const infiniteSaga = function*() {
+  const infiniteSaga = function* () {
     for (;;) yield call(fn1);
   };
 
@@ -180,9 +178,7 @@ describe('runner.run()', () => {
 
   test('"Unused mapped values"', () => {
     const error = catchError(() =>
-      createRunner(saga)
-        .map(call(fn2), 'unused value')
-        .run(),
+      createRunner(saga).map(call(fn2), 'unused value').run(),
     );
 
     expect(error.message).toMatch('Unused mapped values');
@@ -224,9 +220,7 @@ describe('runner.run()', () => {
 
   test('"Unused mapped values" thrown by runner.should.call()', () => {
     const error = catchError(() =>
-      createRunner(sagaInError)
-        .map(call(fn2), 'unused value')
-        .should.call(fn1),
+      createRunner(sagaInError).map(call(fn2), 'unused value').should.call(fn1),
     );
 
     expect(error.message).toMatch('Unused mapped values');
@@ -234,11 +228,7 @@ describe('runner.run()', () => {
   });
 
   test('"No error thrown by the saga"', () => {
-    const error = catchError(() =>
-      createRunner(saga)
-        .catch(Error)
-        .run(),
-    );
+    const error = catchError(() => createRunner(saga).catch(Error).run());
 
     expect(error.message).toMatch('No error thrown by the saga');
     expect(error.callSite).toMatch(RUNNER_CALL_SITE);
@@ -246,9 +236,7 @@ describe('runner.run()', () => {
 
   test('"No error thrown by the saga" thrown by runner.should.yield()', () => {
     const error = catchError(() =>
-      createRunner(saga)
-        .catch(Error)
-        .should.yield(call(fn1)),
+      createRunner(saga).catch(Error).should.yield(call(fn1)),
     );
 
     expect(error.message).toMatch('No error thrown by the saga');
@@ -257,9 +245,7 @@ describe('runner.run()', () => {
 
   test('"No error thrown by the saga" thrown by runner.should.return()', () => {
     const error = catchError(() =>
-      createRunner(saga)
-        .catch(Error)
-        .should.return(true),
+      createRunner(saga).catch(Error).should.return(true),
     );
 
     expect(error.message).toMatch('No error thrown by the saga');
@@ -268,9 +254,7 @@ describe('runner.run()', () => {
 
   test('"No error thrown by the saga" thrown by runner.should.throw()', () => {
     const error = catchError(() =>
-      createRunner(saga)
-        .catch(Error)
-        .should.throw('Failure'),
+      createRunner(saga).catch(Error).should.throw('Failure'),
     );
 
     expect(error.message).toMatch('No error thrown by the saga');
@@ -279,9 +263,7 @@ describe('runner.run()', () => {
 
   test('"No error thrown by the saga" thrown by runner.should.call()', () => {
     const error = catchError(() =>
-      createRunner(saga)
-        .catch(Error)
-        .should.call(fn1),
+      createRunner(saga).catch(Error).should.call(fn1),
     );
 
     expect(error.message).toMatch('No error thrown by the saga');

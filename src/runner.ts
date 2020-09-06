@@ -1,5 +1,5 @@
-import { Engine } from './engine';
 import { Assertions } from './assertions';
+import { Engine } from './engine';
 import { RunnerError } from './errors';
 
 /**

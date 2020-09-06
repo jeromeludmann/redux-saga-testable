@@ -41,6 +41,11 @@ describe('stringify()', () => {
     expect(stringify(map)).toMatchSnapshot();
   });
 
+  test('Set', () => {
+    const set = new Set();
+    expect(stringify(set)).toMatchSnapshot();
+  });
+
   test('Symbol', () => {
     const symbol = { [Symbol('key')]: { symbol: Symbol('value') } };
     expect(stringify(symbol)).toMatchSnapshot();

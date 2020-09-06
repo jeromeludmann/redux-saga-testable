@@ -1,6 +1,5 @@
-import { isDeepStrictEqual } from 'util';
 import { Effect, Saga } from '@redux-saga/types';
-
+import { isDeepStrictEqual } from 'util';
 import { RunnerError } from './errors';
 import { stringify } from './strings';
 import { ErrorPattern, isEffect, matchError } from './utils';
@@ -72,7 +71,7 @@ export class Engine {
       );
     }
 
-    const existingMapping = this.mappings.find(mapping =>
+    const existingMapping = this.mappings.find((mapping) =>
       isDeepStrictEqual(mapping.effect, effect),
     );
 
@@ -141,7 +140,7 @@ export class Engine {
     let nextValue = undefined;
 
     // Allows the runner to consume the mapping values without mutating them.
-    const mappings: EffectMapping[] = this.mappings.map(mapping => ({
+    const mappings: EffectMapping[] = this.mappings.map((mapping) => ({
       ...mapping,
       values: Array.from(mapping.values),
     }));
@@ -174,11 +173,11 @@ export class Engine {
       // Gets the value mapped with the current effect
       // and uses it as the next value to be passed to the generator.
       nextValue = mappings
-        .find(mapping => isDeepStrictEqual(mapping.effect, step.value))
+        .find((mapping) => isDeepStrictEqual(mapping.effect, step.value))
         ?.values.shift();
     }
 
-    const unusedMapping = mappings.find(mapping => mapping.values.length > 0);
+    const unusedMapping = mappings.find((mapping) => mapping.values.length > 0);
 
     if (unusedMapping) {
       throw new RunnerError(
@@ -201,9 +200,7 @@ export class Engine {
       ) {
         throw this.cachedOutput.error;
       }
-    }
-
-    // Checks for useless `runner.catch()`.
+    } // Checks for useless `runner.catch()`.
     else if (this.errorToCatch) {
       throw new RunnerError(
         [

@@ -22,7 +22,7 @@ function getFirstCallSite(stack: string): string | null {
   }
 }
 
-export function catchError(fn: Function): Error & { callSite: string } {
+export function catchError(fn: () => void): Error & { callSite: string } {
   try {
     fn();
   } catch (error) {

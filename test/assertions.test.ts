@@ -1,12 +1,12 @@
 /* eslint-disable @typescript-eslint/explicit-function-return-type */
-import { Task, channel } from 'redux-saga';
-import * as effects from 'redux-saga/effects';
 import { createMockTask } from '@redux-saga/testing-utils';
+import { channel, Task } from 'redux-saga';
 import { createRunner, Runner } from 'redux-saga-testable';
+import * as effects from 'redux-saga/effects';
 import { fn1, fn2, fn3, UserError } from './helpers/mocks';
 
 describe('runner.should.yield()', () => {
-  const saga = function*() {
+  const saga = function* () {
     yield effects.put({ type: 'SUCCESS', payload: 'result' });
   };
 
@@ -46,7 +46,7 @@ describe('runner.should.yield()', () => {
 });
 
 describe('runner.should.return()', () => {
-  const saga = function*() {
+  const saga = function* () {
     return 'result1';
   };
 
@@ -71,7 +71,7 @@ describe('runner.should.return()', () => {
   });
 
   test('does accept "0" as an argument', () => {
-    const saga = function*() {
+    const saga = function* () {
       return 0;
     };
 
@@ -79,7 +79,7 @@ describe('runner.should.return()', () => {
   });
 
   test('does accept "undefined" as an argument', () => {
-    const saga = function*() {
+    const saga = function* () {
       return;
     };
 
@@ -97,43 +97,35 @@ describe('runner.should.return()', () => {
 });
 
 describe('runner.should.throw()', () => {
-  const saga = function*() {
+  const saga = function* () {
     yield effects.call(fn1);
     throw new UserError('Failure');
   };
 
   test('asserts that the saga throws an error', () => {
-    createRunner(saga)
-      .catch(Error)
-      .should.throw('Failure');
+    createRunner(saga).catch(Error).should.throw('Failure');
   });
 
   test('asserts that the saga does not throw an error', () => {
-    createRunner(saga)
-      .catch('Failure')
-      .should.not.throw('unthrown');
+    createRunner(saga).catch('Failure').should.not.throw('unthrown');
   });
 
   test('does not assert that the saga throws an error', () => {
     const runSaga = () =>
-      createRunner(saga)
-        .catch('Failure')
-        .should.throw('unthrown');
+      createRunner(saga).catch('Failure').should.throw('unthrown');
 
     expect(runSaga).toThrowErrorMatchingSnapshot();
   });
 
   test('does not assert that the saga does not throw an error', () => {
     const runSaga = () =>
-      createRunner(saga)
-        .catch('Failure')
-        .should.not.throw('Failure');
+      createRunner(saga).catch('Failure').should.not.throw('Failure');
 
     expect(runSaga).toThrowErrorMatchingSnapshot();
   });
 
   test('does not assert that the saga throws an error that is not thrown', () => {
-    const saga = function*() {
+    const saga = function* () {
       yield effects.put({ type: 'SUCCESS' });
     };
 
@@ -143,7 +135,7 @@ describe('runner.should.throw()', () => {
   });
 
   test('does not assert that the saga throws an error without providing an error pattern', () => {
-    const saga = function*() {
+    const saga = function* () {
       throw new UserError('Failure');
     };
 
@@ -158,7 +150,7 @@ describe('runner.should.throw()', () => {
 
 describe('runner.should.not', () => {
   test('can negate many times', () => {
-    const saga = function*(throws = false) {
+    const saga = function* (throws = false) {
       yield effects.call(fn1);
       if (throws) throw new Error('Failure');
       return 'END';
@@ -200,7 +192,7 @@ describe('runner.should.not', () => {
 
 describe('effect assertions', () => {
   test('runner.should.take()', () => {
-    const saga = function*() {
+    const saga = function* () {
       yield effects.take('FETCH_USER');
     };
 
@@ -210,7 +202,7 @@ describe('effect assertions', () => {
   });
 
   test('runner.should.takeMaybe()', () => {
-    const saga = function*() {
+    const saga = function* () {
       yield effects.takeMaybe('FETCH_USER');
     };
 
@@ -220,7 +212,7 @@ describe('effect assertions', () => {
   });
 
   test('runner.should.takeEvery()', () => {
-    const saga = function*() {
+    const saga = function* () {
       yield effects.takeEvery('FETCH_USER', fn1);
     };
 
@@ -230,7 +222,7 @@ describe('effect assertions', () => {
   });
 
   test('runner.should.takeLatest()', () => {
-    const saga = function*() {
+    const saga = function* () {
       yield effects.takeLatest('FETCH_USER', fn1);
     };
 
@@ -240,7 +232,7 @@ describe('effect assertions', () => {
   });
 
   test('runner.should.takeLeading()', () => {
-    const saga = function*() {
+    const saga = function* () {
       yield effects.takeLeading('FETCH_USER', fn1);
     };
 
@@ -250,7 +242,7 @@ describe('effect assertions', () => {
   });
 
   test('runner.should.put()', () => {
-    const saga = function*() {
+    const saga = function* () {
       yield effects.put({ type: 'SUCCESS' });
     };
 
@@ -260,7 +252,7 @@ describe('effect assertions', () => {
   });
 
   test('runner.should.putResolve()', () => {
-    const saga = function*() {
+    const saga = function* () {
       yield effects.putResolve({ type: 'SUCCESS' });
     };
 
@@ -270,17 +262,15 @@ describe('effect assertions', () => {
   });
 
   test('runner.should.call()', () => {
-    const saga = function*() {
+    const saga = function* () {
       yield effects.call(fn1);
     };
 
-    createRunner(saga)
-      .should.call(fn1)
-      .should.not.call(fn2);
+    createRunner(saga).should.call(fn1).should.not.call(fn2);
   });
 
   test('runner.should.apply()', () => {
-    const saga = function*() {
+    const saga = function* () {
       yield effects.apply({ key: 'value' }, fn1, []);
     };
 
@@ -290,39 +280,33 @@ describe('effect assertions', () => {
   });
 
   test('runner.should.cps()', () => {
-    const saga = function*() {
+    const saga = function* () {
       yield effects.cps(fn1);
     };
 
-    createRunner(saga)
-      .should.cps(fn1)
-      .should.not.cps(fn2);
+    createRunner(saga).should.cps(fn1).should.not.cps(fn2);
   });
 
   test('runner.should.fork()', () => {
-    const saga = function*() {
+    const saga = function* () {
       yield effects.fork(fn1);
     };
 
-    createRunner(saga)
-      .should.fork(fn1)
-      .should.not.fork(fn2);
+    createRunner(saga).should.fork(fn1).should.not.fork(fn2);
   });
 
   test('runner.should.spawn()', () => {
-    const saga = function*() {
+    const saga = function* () {
       yield effects.spawn(fn1);
     };
 
-    createRunner(saga)
-      .should.spawn(fn1)
-      .should.not.spawn(fn2);
+    createRunner(saga).should.spawn(fn1).should.not.spawn(fn2);
   });
 
   test('runner.should.join()', () => {
     const mockTask = createMockTask();
 
-    const saga = function*() {
+    const saga = function* () {
       const task: Task = yield effects.fork(fn1);
       yield effects.join(task);
     };
@@ -336,7 +320,7 @@ describe('effect assertions', () => {
   test('runner.should.cancel()', () => {
     const mockTask = createMockTask();
 
-    const saga = function*() {
+    const saga = function* () {
       const task: Task = yield effects.fork(fn1);
       yield effects.cancel(task);
     };
@@ -351,17 +335,15 @@ describe('effect assertions', () => {
     const getUser = (state: any) => state.user;
     const getProduct = (state: any) => state.product;
 
-    const saga = function*() {
+    const saga = function* () {
       yield effects.select(getUser);
     };
 
-    createRunner(saga)
-      .should.select(getUser)
-      .should.not.select(getProduct);
+    createRunner(saga).should.select(getUser).should.not.select(getProduct);
   });
 
   test('runner.should.actionChannel()', () => {
-    const saga = function*() {
+    const saga = function* () {
       yield effects.actionChannel('FETCH_USER');
     };
 
@@ -373,17 +355,15 @@ describe('effect assertions', () => {
   test('runner.should.flush()', () => {
     const chan = channel();
 
-    const saga = function*() {
+    const saga = function* () {
       yield effects.flush(chan);
     };
 
-    createRunner(saga)
-      .should.flush(chan)
-      .should.not.flush(channel());
+    createRunner(saga).should.flush(chan).should.not.flush(channel());
   });
 
   test('runner.should.cancelled()', () => {
-    const saga = function*(shouldCancel: boolean) {
+    const saga = function* (shouldCancel: boolean) {
       if (shouldCancel) {
         yield effects.cancelled();
       }
@@ -395,7 +375,7 @@ describe('effect assertions', () => {
   });
 
   test('runner.should.setContext()', () => {
-    const saga = function*() {
+    const saga = function* () {
       yield effects.setContext({ key: 'user' });
     };
 
@@ -405,27 +385,23 @@ describe('effect assertions', () => {
   });
 
   test('runner.should.getContext()', () => {
-    const saga = function*() {
+    const saga = function* () {
       yield effects.getContext('key');
     };
 
-    createRunner(saga)
-      .should.getContext('key')
-      .should.not.getContext('name');
+    createRunner(saga).should.getContext('key').should.not.getContext('name');
   });
 
   test('runner.should.delay()', () => {
-    const saga = function*() {
+    const saga = function* () {
       yield effects.delay(1000);
     };
 
-    createRunner(saga)
-      .should.delay(1000)
-      .should.not.delay(3000);
+    createRunner(saga).should.delay(1000).should.not.delay(3000);
   });
 
   test('runner.should.throttle()', () => {
-    const saga = function*() {
+    const saga = function* () {
       yield effects.throttle(1000, 'FETCH_USER', fn1);
     };
 
@@ -437,7 +413,7 @@ describe('effect assertions', () => {
   });
 
   test('runner.should.debounce()', () => {
-    const saga = function*() {
+    const saga = function* () {
       yield effects.debounce(1000, 'FETCH_USER', fn1);
     };
 
@@ -449,7 +425,7 @@ describe('effect assertions', () => {
   });
 
   test('runner.should.retry()', () => {
-    const saga = function*() {
+    const saga = function* () {
       yield effects.retry(3, 10, fn1);
     };
 
@@ -461,7 +437,7 @@ describe('effect assertions', () => {
   });
 
   test('runner.should.all()', () => {
-    const saga = function*() {
+    const saga = function* () {
       yield effects.all([effects.call(fn1), effects.call(fn2)]);
     };
 
@@ -473,7 +449,7 @@ describe('effect assertions', () => {
   });
 
   test('runner.should.race()', () => {
-    const saga = function*() {
+    const saga = function* () {
       yield effects.race({
         response1: effects.call(fn1),
         response2: effects.call(fn2),

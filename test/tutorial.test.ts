@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/explicit-function-return-type */
 import { Action } from 'redux';
-import { select, put, call, take, delay } from 'redux-saga/effects';
-import { createRunner, throwError, finalize } from 'redux-saga-testable';
+import { createRunner, finalize, throwError } from 'redux-saga-testable';
+import { call, delay, put, select, take } from 'redux-saga/effects';
 
 interface FetchUserAction extends Action<'FETCH_USER'> {
   payload: { userId: number };

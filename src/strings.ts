@@ -62,14 +62,14 @@ class Stringifier {
 
     return this.stringifyNested(
       () =>
-        keys.map(key => `${String(key)}: ${this.stringifyValue(value[key])}`),
+        keys.map((key) => `${String(key)}: ${this.stringifyValue(value[key])}`),
       { wrapper: '{}', size: keys.length },
     );
   }
 
   private stringifyArray(value: unknown[]): string {
     return this.stringifyNested(
-      () => value.map(value => this.stringifyValue(value)),
+      () => value.map((value) => this.stringifyValue(value)),
       {
         wrapper: '[]',
         size: value.length,
@@ -90,7 +90,7 @@ class Stringifier {
 
     const prevWidth = this.currentWidth;
 
-    this.currentWidth = this.currentWidth + this.tabWidth;
+    this.currentWidth += this.tabWidth;
     ++this.currentDepth;
 
     const elements = stringifyFn();
@@ -100,7 +100,7 @@ class Stringifier {
     }
 
     const nested = elements
-      .map(str => `${this.currentWidth}${String(str)}`)
+      .map((str) => `${this.currentWidth}${String(str)}`)
       .join(',\n');
 
     this.currentWidth = prevWidth;

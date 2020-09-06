@@ -2,6 +2,8 @@
 
 exports[`stringify() Map 1`] = `"  [object Map]"`;
 
+exports[`stringify() Set 1`] = `"  [object Set]"`;
+
 exports[`stringify() Symbol 1`] = `
 "  {
     Symbol(key): {

@@ -1,11 +1,11 @@
 /* eslint-disable @typescript-eslint/explicit-function-return-type */
-import { put, call, fork } from 'redux-saga/effects';
 import { createRunner } from 'redux-saga-testable';
+import { call, fork, put } from 'redux-saga/effects';
 import { fn1, fn2, fn3 } from './helpers/mocks';
 
 describe('createRunner()', () => {
   test('creates a runner with a saga and its arguments', () => {
-    const saga = function*() {
+    const saga = function* () {
       yield put({ type: 'SUCCESS' });
     };
 
@@ -23,7 +23,7 @@ describe('createRunner()', () => {
 
 describe('runner.clone()', () => {
   test('clones instances of a saga runner several times', () => {
-    const saga = function*() {
+    const saga = function* () {
       const result1 = yield call(fn1);
       const result2 = yield call(fn2);
       const result3 = yield call(fn3);
