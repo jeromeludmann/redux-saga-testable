@@ -5,6 +5,7 @@
 ![peer](https://img.shields.io/npm/dependency-version/redux-saga-testable/peer/redux)
 ![peer](https://img.shields.io/npm/dependency-version/redux-saga-testable/peer/redux-saga)
 [![travis](https://img.shields.io/travis/jeromeludmann/redux-saga-testable)](https://travis-ci.org/jeromeludmann/redux-saga-testable)
+![ci](https://github.com/jeromeludmann/redux-saga-testable/workflows/ci/badge.svg)
 [![coveralls](https://img.shields.io/coveralls/github/jeromeludmann/redux-saga-testable)](https://coveralls.io/github/jeromeludmann/redux-saga-testable)
 ![downloads](https://img.shields.io/npm/dt/redux-saga-testable)
 ![license](https://img.shields.io/npm/l/redux-saga-testable)
@@ -50,9 +51,7 @@ If that speaks to you, go to [Getting started].
 
 ## Getting started
 
-### Requirements
-
-[Node.js] >=8.10.0 is required to use this library.
+Required: `node >= 10`
 
 ### Install
 

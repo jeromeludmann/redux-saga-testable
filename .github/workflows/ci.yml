@@ -1,0 +1,46 @@
+name: ci
+
+on:
+  push:
+    branches:
+      - master
+
+  pull_request:
+    branches:
+      - master
+
+  schedule:
+    - cron: '0 20 * * *'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [10.x, 14.x]
+      fail-fast: true
+
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v2
+
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v1
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Check typing
+        run: npm run type-check
+
+      - name: Lint sources
+        run: npm run lint
+
+      - name: Check circular dependencies
+        run: npm run circular-deps
+
+      - name: Run test coverage
+        run: npm run test-coverage
