@@ -111,7 +111,7 @@ Expected effect:
     type: \\"CALL\\",
     payload: {
         context: null,
-        fn: ƒ <anonymous>,
+        fn: ƒ fn1,
         args: []
     }
   }
