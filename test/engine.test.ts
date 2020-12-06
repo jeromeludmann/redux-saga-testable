@@ -43,7 +43,9 @@ describe('runner.run()', () => {
     expect(output.effects).toEqual([
       put({ type: 'SUCCESS', payload: { message: 'not an effect' } }),
     ]);
-    expect(output.effects).not.toContainEqual({ message: 'not an effect' });
+    expect(output.effects).not.toContainEqual(({
+      message: 'not an effect',
+    } as unknown) as Effect);
   });
 
   test('runs a saga twice from the same shared instance', () => {
