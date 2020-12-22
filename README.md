@@ -51,8 +51,6 @@ If that speaks to you, go to [Getting started].
 
 ## Getting started
 
-Required: `node >= 10`
-
 ### Install
 
 Get it with npm:
