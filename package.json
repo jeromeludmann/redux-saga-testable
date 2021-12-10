@@ -1,6 +1,6 @@
 {
   "name": "redux-saga-testable",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "Make redux-saga more easily testable",
   "main": "lib/main.js",
   "types": "lib/main.d.ts",
