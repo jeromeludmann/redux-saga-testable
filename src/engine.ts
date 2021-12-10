@@ -149,7 +149,7 @@ export class Engine {
     for (;;) {
       try {
         step = this.next(iterator, nextValue);
-      } catch (sagaError) {
+      } catch (sagaError: any) {
         this.cachedOutput.error = sagaError;
         break;
       }

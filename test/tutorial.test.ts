@@ -26,7 +26,7 @@ const services = {
   notify: jest.fn(),
 };
 
-function* fetchUserWorker(action: FetchUserAction) {
+function* fetchUserWorker(action: FetchUserAction): Generator {
   const { userId } = action.payload;
 
   yield put({ type: 'FETCH_USER_REQUEST' });
@@ -88,14 +88,14 @@ test('fetchUserWorker() with snapshot testing', () => {
   expect(output).toMatchSnapshot();
 });
 
-function* fetchProductWorker(action: FetchProductAction) {
+function* fetchProductWorker(action: FetchProductAction): Generator {
   const { productId } = action.payload;
 
   try {
     yield put({ type: 'FETCH_PRODUCT_REQUEST' });
     const product = yield call(services.getProductById, productId);
     yield put({ type: 'FETCH_PRODUCT_SUCCESS', payload: product });
-  } catch (error) {
+  } catch (error: any) {
     yield put({ type: 'FETCH_PRODUCT_FAILURE', payload: error.message });
   }
 }
@@ -112,7 +112,7 @@ test('fetchProductWorker() should dispatch FETCH_PRODUCT_FAILURE if services.get
     .should.put({ type: 'FETCH_PRODUCT_FAILURE', payload: error.message });
 });
 
-function* sendPingWorker(action: SendPingAction) {
+function* sendPingWorker(action: SendPingAction): Generator {
   yield delay(action.payload.delay);
   const pong1 = yield call(services.ping);
 
@@ -156,7 +156,7 @@ test('notifyWatcher() should dispatch NOTIFY_END', () => {
     .should.put({ type: 'NOTIFY_END' });
 });
 
-function* findProduct(id: number) {
+function* findProduct(id: number): Generator {
   if (id < 0) {
     throw new Error(`Unable to find product ${id}`);
   }

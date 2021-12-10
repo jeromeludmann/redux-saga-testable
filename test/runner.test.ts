@@ -23,7 +23,7 @@ describe('createRunner()', () => {
 
 describe('runner.clone()', () => {
   test('clones instances of a saga runner several times', () => {
-    const saga = function* () {
+    const saga = function* (): Generator {
       const result1 = yield call(fn1);
       const result2 = yield call(fn2);
       const result3 = yield call(fn3);

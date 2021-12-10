@@ -33,7 +33,7 @@ describe('runner.run()', () => {
   });
 
   test('runs a saga that yields expressions that are not effects', () => {
-    const saga = function* () {
+    const saga = function* (): Generator {
       const result = yield { message: 'not an effect' };
       yield put({ type: 'SUCCESS', payload: result });
     };
@@ -43,13 +43,13 @@ describe('runner.run()', () => {
     expect(output.effects).toEqual([
       put({ type: 'SUCCESS', payload: { message: 'not an effect' } }),
     ]);
-    expect(output.effects).not.toContainEqual(({
+    expect(output.effects).not.toContainEqual({
       message: 'not an effect',
-    } as unknown) as Effect);
+    } as unknown as Effect);
   });
 
   test('runs a saga twice from the same shared instance', () => {
-    const saga = function* () {
+    const saga = function* (): Generator {
       const result1 = yield call(fn1);
       const result2 = yield call(fn2);
       yield put({ type: 'SUCCESS', payload: [result1, result2] });
@@ -113,7 +113,7 @@ describe('runner.run()', () => {
 
 describe('runner.map()', () => {
   test('maps an effect to a value', () => {
-    const saga = function* () {
+    const saga = function* (): Generator {
       const result = yield call(fn1);
       yield put({ type: 'SUCCESS', payload: result });
     };
@@ -126,7 +126,7 @@ describe('runner.map()', () => {
   });
 
   test('maps an effect to undefined', () => {
-    const saga = function* () {
+    const saga = function* (): Generator {
       const result = yield call(fn1);
       yield put({ type: 'SUCCESS', payload: result });
     };
@@ -139,11 +139,11 @@ describe('runner.map()', () => {
   });
 
   test('maps an effect to throwError()', () => {
-    const saga = function* () {
+    const saga = function* (): Generator {
       try {
         const result = yield call(fn1);
         yield put({ type: 'SUCCESS', payload: result });
-      } catch (error) {
+      } catch (error: any) {
         yield put({ type: 'FAILURE', payload: error.message });
       }
     };
@@ -171,7 +171,7 @@ describe('runner.map()', () => {
   });
 
   test('maps an effect to finalize()', () => {
-    const saga = function* () {
+    const saga = function* (): Generator {
       let result = undefined;
       try {
         result = yield call(fn1);
@@ -187,7 +187,7 @@ describe('runner.map()', () => {
   });
 
   test('maps an effect to finalize() with a value', () => {
-    const saga = function* () {
+    const saga = function* (): Generator {
       let result = undefined;
       try {
         result = yield call(fn1);
@@ -206,7 +206,7 @@ describe('runner.map()', () => {
   });
 
   test('maps an effect to several values', () => {
-    const saga = function* () {
+    const saga = function* (): Generator {
       const result1 = yield call(fn1);
       const result2 = yield call(fn1);
       const result3 = yield call(fn1);
@@ -223,7 +223,7 @@ describe('runner.map()', () => {
   });
 
   test('maps several effects to several values', () => {
-    const saga = function* () {
+    const saga = function* (): Generator {
       const result1 = yield call(fn1);
       const result2 = yield call(fn2);
       const result3 = yield call(fn3);
@@ -242,7 +242,7 @@ describe('runner.map()', () => {
   });
 
   test('maps an effect to a "null" value', () => {
-    const saga = function* () {
+    const saga = function* (): Generator {
       const result1 = yield call(fn1);
       yield put({ type: 'SUCCESS', payload: result1 });
     };
@@ -280,7 +280,7 @@ describe('runner.map()', () => {
   });
 
   test('does not map an effect to too many values', () => {
-    const saga = function* () {
+    const saga = function* (): Generator {
       const result = yield call(fn1);
       yield put({ type: 'SUCCESS', payload: result });
     };
@@ -292,15 +292,17 @@ describe('runner.map()', () => {
   });
 
   test('does not map an effect without providing a value', () => {
-    const saga = function* () {
+    const saga = function* (): Generator {
       const result = yield call(fn1);
       yield put({ type: 'SUCCESS', payload: result });
     };
 
     const runSaga = () =>
-      (createRunner(saga) as Runner & {
-        map: (effect: Effect) => Runner;
-      })
+      (
+        createRunner(saga) as Runner & {
+          map: (effect: Effect) => Runner;
+        }
+      )
         .map(call(fn1))
         .run();
 

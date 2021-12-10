@@ -25,7 +25,7 @@ function getFirstCallSite(stack: string): string | null {
 export function catchError(fn: () => void): Error & { callSite: string } {
   try {
     fn();
-  } catch (error) {
+  } catch (error: any) {
     (error as ReturnType<typeof catchError>).callSite =
       getFirstCallSite(error.stack) ?? '';
     return error;

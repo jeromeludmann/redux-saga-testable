@@ -13,7 +13,7 @@ export function captureStackTrace<F extends (...args: unknown[]) => any>(
 ): ReturnType<F> {
   try {
     return fn();
-  } catch (error) {
+  } catch (error: any) {
     if (error.name === RunnerError.name) {
       Error.captureStackTrace(error, callSite);
     }
